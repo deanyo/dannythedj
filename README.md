@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/deanyo/dannythedj/actions/workflows/ci.yml/badge.svg)](https://github.com/deanyo/dannythedj/actions/workflows/ci.yml)
 [![Docker](https://github.com/deanyo/dannythedj/actions/workflows/docker.yml/badge.svg)](https://github.com/deanyo/dannythedj/actions/workflows/docker.yml)
+[![Publish](https://github.com/deanyo/dannythedj/actions/workflows/publish.yml/badge.svg)](https://github.com/deanyo/dannythedj/actions/workflows/publish.yml)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Discord YT music bot focused on YouTube playback via `yt-dlp`. Supports
@@ -87,4 +88,11 @@ Or use Docker Compose:
 
 ```sh
 docker compose up --build
+```
+
+To pull the published image (GHCR):
+
+```sh
+docker pull ghcr.io/deanyo/dannythedj:latest
+docker run --env-file .env ghcr.io/deanyo/dannythedj:latest
 ```

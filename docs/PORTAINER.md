@@ -47,7 +47,35 @@ services:
    - `GUILD_ID` (optional)
 7) Deploy the stack.
 
-## Option B: Prebuild on Mac, Run on NAS
+## Option C: GHCR Image (recommended)
+1) Ensure the GHCR image exists (published by GitHub Actions).
+2) In Portainer, open **Stacks** -> **Add stack**.
+3) Paste this compose file (or use `docker-compose.ghcr.yml`):
+
+```yaml
+version: "3.8"
+
+services:
+  musicbot:
+    image: ghcr.io/deanyo/dannythedj:latest
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      CLIENT_ID: ${CLIENT_ID}
+      GUILD_ID: ${GUILD_ID}
+    restart: unless-stopped
+```
+
+4) If the package is private, add **Registry credentials** for GHCR:
+   - Registry: `ghcr.io`
+   - Username: your GitHub username
+   - Password: a PAT with **read:packages**
+5) Add environment variables:
+   - `DISCORD_TOKEN`
+   - `CLIENT_ID`
+   - `GUILD_ID` (optional)
+6) Deploy the stack.
+
+## Option D: Prebuild on Mac, Run on NAS
 1) Build and tag locally:
 
 ```sh
