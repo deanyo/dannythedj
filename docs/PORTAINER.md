@@ -19,12 +19,14 @@ version: "3.8"
 services:
   musicbot:
     build: /path/to/musicbot
-    env_file:
-      - .env
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      CLIENT_ID: ${CLIENT_ID}
+      GUILD_ID: ${GUILD_ID}
     restart: unless-stopped
 ```
 
-4) Upload the project folder (containing `Dockerfile`, `src/`, and `.env`) to your NAS.
+4) Upload the project folder (containing `Dockerfile` and `src/`) to your NAS.
    Example path: `/volume1/docker/musicbot`.
    Update the `build` path above to match your upload location.
 5) Under **Environment variables**, add:
@@ -32,6 +34,18 @@ services:
    - `CLIENT_ID`
    - `GUILD_ID` (optional)
 6) Deploy the stack.
+
+## Option B: Private GitHub Repo (Portainer Git Stack)
+1) Create a GitHub fine-grained PAT with **Read access** to this repo.
+2) In Portainer, open **Stacks** -> **Add stack** -> **Git repository**.
+3) Repo URL: `https://github.com/deanyo/dannythedj.git` (branch `main`).
+4) Provide Git credentials (username + token) in Portainer.
+5) Compose file path: `docker-compose.yml`.
+6) Add environment variables in Portainer:
+   - `DISCORD_TOKEN`
+   - `CLIENT_ID`
+   - `GUILD_ID` (optional)
+7) Deploy the stack.
 
 ## Option B: Prebuild on Mac, Run on NAS
 1) Build and tag locally:
