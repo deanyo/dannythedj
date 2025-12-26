@@ -1,7 +1,12 @@
 require('dotenv').config();
 
 const { writeFile } = require('node:fs/promises');
-const { Client, GatewayIntentBits, PermissionsBitField } = require('discord.js');
+const {
+  Client,
+  GatewayIntentBits,
+  MessageFlags,
+  PermissionsBitField
+} = require('discord.js');
 const { GuildQueue } = require('./player');
 const { resolveTracks } = require('./yt');
 const logger = require('./logger');
@@ -237,7 +242,7 @@ async function handleDebug(interaction) {
   if (!interaction.memberPermissions?.has(PermissionsBitField.Flags.ManageGuild)) {
     return interaction.reply({
       content: 'You need Manage Server to change debug logging.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -268,21 +273,27 @@ async function handleDebug(interaction) {
 
   return interaction.reply({
     content: `Log level: ${logger.getLevel()}`,
-    ephemeral: true
+    flags: MessageFlags.Ephemeral
   });
 }
 
 async function handleLulaye(interaction) {
   try {
     await interaction.user.send(`Here you go: ${LULAYE_URL}`);
-    await interaction.reply({ content: 'Sent you a DM.', ephemeral: true });
+    await interaction.reply({
+      content: 'Sent you a DM.',
+      flags: MessageFlags.Ephemeral
+    });
   } catch (error) {
     logger.error('Failed to DM lulaye link', error);
     const message = 'I could not DM you. Please enable DMs from server members.';
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply({ content: message });
     } else {
-      await interaction.reply({ content: message, ephemeral: true });
+      await interaction.reply({
+        content: message,
+        flags: MessageFlags.Ephemeral
+      });
     }
   }
 }
@@ -367,8 +378,8 @@ function parseMentionCommand(content) {
   };
 }
 
-client.once('ready', () => {
-  logger.info(`Logged in as ${client.user.tag}`);
+client.once('clientReady', (readyClient) => {
+  logger.info(`Logged in as ${readyClient.user.tag}`);
   startHealthcheck();
 });
 
