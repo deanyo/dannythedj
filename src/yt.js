@@ -10,6 +10,10 @@ function isLikelyUrl(input) {
   return URL_PATTERN.test(input) || /youtu\.?be/i.test(input);
 }
 
+function isPlaylistEntry(entry) {
+  return entry?._type === 'playlist' || entry?.ie_key === 'YoutubePlaylist';
+}
+
 function getPlayableUrl(entry) {
   if (!entry) {
     return null;
@@ -30,6 +34,9 @@ function getPlayableUrl(entry) {
 }
 
 function toTrack(entry) {
+  if (isPlaylistEntry(entry) && !Array.isArray(entry.entries)) {
+    return null;
+  }
   const url = getPlayableUrl(entry);
   if (!url) {
     return null;
@@ -86,11 +93,16 @@ function runYtDlpJson(input) {
 async function resolveTracks(input) {
   const query = isLikelyUrl(input) ? input : `ytsearch1:${input}`;
   const info = await runYtDlpJson(query);
-  if (Array.isArray(info.entries)) {
-    return info.entries.map(toTrack).filter(Boolean);
+  const tracks = extractTracks(info);
+  if (tracks.length > 0) {
+    return tracks;
   }
-  const track = toTrack(info);
-  return track ? [track] : [];
+  const playlistUrl = info?.webpage_url || info?.url;
+  if (playlistUrl && /[?&]list=/.test(playlistUrl)) {
+    const playlistInfo = await runYtDlpJson(playlistUrl);
+    return extractTracks(playlistInfo);
+  }
+  return [];
 }
 
 async function createAudioResourceFromUrl(url, volume) {
@@ -156,3 +168,20 @@ module.exports = {
   createAudioResourceFromUrl,
   resolveTracks
 };
+
+function flattenEntries(entries) {
+  return entries.flatMap((entry) => {
+    if (Array.isArray(entry?.entries)) {
+      return flattenEntries(entry.entries);
+    }
+    return [entry];
+  });
+}
+
+function extractTracks(info) {
+  if (Array.isArray(info?.entries)) {
+    return flattenEntries(info.entries).map(toTrack).filter(Boolean);
+  }
+  const track = toTrack(info);
+  return track ? [track] : [];
+}

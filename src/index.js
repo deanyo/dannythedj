@@ -581,4 +581,37 @@ client.on('messageCreate', async (message) => {
   }
 });
 
+client.on('voiceStateUpdate', (oldState, newState) => {
+  const guild = newState.guild || oldState.guild;
+  if (!guild) {
+    return;
+  }
+  const queue = queues.get(guild.id);
+  if (!queue || !queue.connection) {
+    return;
+  }
+
+  const channelId = queue.connection.joinConfig.channelId;
+  if (!channelId) {
+    return;
+  }
+
+  const channel = guild.channels.cache.get(channelId);
+  if (!channel || !channel.isVoiceBased()) {
+    return;
+  }
+
+  const nonBotMembers = channel.members.filter((member) => !member.user.bot)
+    .size;
+  if (nonBotMembers > 0) {
+    return;
+  }
+
+  queue.textChannel
+    ?.send('Voice channel is empty. Leaving.')
+    .catch(() => null);
+  queue.destroy();
+  queues.delete(guild.id);
+});
+
 client.login(token);

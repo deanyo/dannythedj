@@ -74,6 +74,7 @@ and queues the first result.
 
 `/debug` requires Manage Server permissions and responds ephemerally.
 `/volume` accepts 0-200 (100 is default).
+If the voice channel becomes empty, the bot will leave automatically.
 
 ## Optional Configuration
 
