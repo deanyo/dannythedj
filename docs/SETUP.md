@@ -17,7 +17,7 @@
    - `GUILD_ID=...` (optional, speeds up command registration)
    - `LOG_LEVEL=info` (optional)
    - `DEFAULT_VOLUME=100` (optional)
-   - `IDLE_DISCONNECT_SECONDS=300` (optional)
+   - `IDLE_DISCONNECT_SECONDS=5` (optional)
 2) Install dependencies:
 
 ```sh

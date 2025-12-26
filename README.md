@@ -80,7 +80,7 @@ If the voice channel becomes empty, the bot will leave automatically.
 
 - `LOG_LEVEL`: `info` (default) or `debug`
 - `DEFAULT_VOLUME`: 0-200 (default 100)
-- `IDLE_DISCONNECT_SECONDS`: idle timeout before leaving voice (default 300)
+- `IDLE_DISCONNECT_SECONDS`: idle timeout before leaving voice (default 5)
 - `HEALTHCHECK_PATH`: file updated by the bot for container healthchecks
 - `HEALTHCHECK_MAX_AGE_SECONDS`: max age before healthcheck fails (default 120)
 
