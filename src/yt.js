@@ -105,7 +105,19 @@ async function resolveTracks(input) {
   return [];
 }
 
-const DEFAULT_STREAM_TIMEOUT_MS = Number(process.env.STREAM_START_TIMEOUT_MS) || 15_000;
+function getNumberEnv(name, fallback) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') {
+    return fallback;
+  }
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+const DEFAULT_STREAM_TIMEOUT_MS = getNumberEnv(
+  'STREAM_START_TIMEOUT_MS',
+  15_000
+);
 
 async function createAudioResourceFromUrl(url, volume, options = {}) {
   return new Promise((resolve, reject) => {

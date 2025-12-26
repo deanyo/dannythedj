@@ -17,25 +17,33 @@ const PUMP_PLAYLIST_URL =
 const LULAYE_URL = 'https://www.youtube.com/watch?v=VKAv2AHIKEw';
 const HEALTHCHECK_PATH =
   process.env.HEALTHCHECK_PATH || '/tmp/musicbot-healthcheck';
-const DEFAULT_VOLUME_RAW = Number(process.env.DEFAULT_VOLUME);
+function getNumberEnv(name, fallback) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') {
+    return fallback;
+  }
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : fallback;
+}
+
 const DEFAULT_VOLUME_PERCENT = clamp(
-  Number.isFinite(DEFAULT_VOLUME_RAW) ? DEFAULT_VOLUME_RAW : 100,
+  getNumberEnv('DEFAULT_VOLUME', 100),
   0,
   200
 );
 const DEFAULT_VOLUME = DEFAULT_VOLUME_PERCENT / 100;
-const IDLE_DISCONNECT_RAW = Number(process.env.IDLE_DISCONNECT_SECONDS);
-const IDLE_DISCONNECT_SECONDS = Number.isFinite(IDLE_DISCONNECT_RAW)
-  ? IDLE_DISCONNECT_RAW
-  : 5;
+const IDLE_DISCONNECT_SECONDS = getNumberEnv(
+  'IDLE_DISCONNECT_SECONDS',
+  5
+);
 const IDLE_DISCONNECT_MS =
   Number.isFinite(IDLE_DISCONNECT_SECONDS) && IDLE_DISCONNECT_SECONDS > 0
     ? IDLE_DISCONNECT_SECONDS * 1000
     : 0;
-const STREAM_TIMEOUT_RAW = Number(process.env.STREAM_START_TIMEOUT_MS);
-const STREAM_TIMEOUT_MS = Number.isFinite(STREAM_TIMEOUT_RAW)
-  ? STREAM_TIMEOUT_RAW
-  : 15_000;
+const STREAM_TIMEOUT_MS = getNumberEnv(
+  'STREAM_START_TIMEOUT_MS',
+  15_000
+);
 
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
