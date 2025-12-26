@@ -17,6 +17,21 @@ const PUMP_PLAYLIST_URL =
 const LULAYE_URL = 'https://www.youtube.com/watch?v=VKAv2AHIKEw';
 const HEALTHCHECK_PATH =
   process.env.HEALTHCHECK_PATH || '/tmp/musicbot-healthcheck';
+const DEFAULT_VOLUME_RAW = Number(process.env.DEFAULT_VOLUME);
+const DEFAULT_VOLUME_PERCENT = clamp(
+  Number.isFinite(DEFAULT_VOLUME_RAW) ? DEFAULT_VOLUME_RAW : 100,
+  0,
+  200
+);
+const DEFAULT_VOLUME = DEFAULT_VOLUME_PERCENT / 100;
+const IDLE_DISCONNECT_RAW = Number(process.env.IDLE_DISCONNECT_SECONDS);
+const IDLE_DISCONNECT_SECONDS = Number.isFinite(IDLE_DISCONNECT_RAW)
+  ? IDLE_DISCONNECT_RAW
+  : 300;
+const IDLE_DISCONNECT_MS =
+  Number.isFinite(IDLE_DISCONNECT_SECONDS) && IDLE_DISCONNECT_SECONDS > 0
+    ? IDLE_DISCONNECT_SECONDS * 1000
+    : 0;
 
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
@@ -38,10 +53,17 @@ const queues = new Map();
 function getQueue(guildId) {
   let queue = queues.get(guildId);
   if (!queue) {
-    queue = new GuildQueue(guildId);
+    queue = new GuildQueue(guildId, {
+      idleDisconnectMs: IDLE_DISCONNECT_MS,
+      defaultVolume: DEFAULT_VOLUME
+    });
     queues.set(guildId, queue);
   }
   return queue;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function formatDuration(seconds) {
@@ -79,6 +101,13 @@ function formatUptime(seconds) {
   }
   parts.push(`${secs}s`);
   return parts.join(' ');
+}
+
+function formatVolumePercent(volume) {
+  if (!Number.isFinite(volume)) {
+    return 'unknown';
+  }
+  return Math.round(volume * 100);
 }
 
 function formatTrackLine(track, index, options = {}) {
@@ -122,6 +151,13 @@ function buildDurationSummary(tracks) {
     return `Total remaining: ${formatDuration(totalSeconds)}`;
   }
   return `Total remaining: ${unknownCount} unknown`;
+}
+
+function parseVolumePercent(input) {
+  if (!Number.isFinite(input)) {
+    return null;
+  }
+  return clamp(input, 0, 200);
 }
 
 function buildQueueMessage(queue) {
@@ -222,6 +258,20 @@ async function handlePlay({ guild, member, channel, reply, input }) {
 
 function handlePump(payload) {
   return handlePlay({ ...payload, input: PUMP_PLAYLIST_URL });
+}
+
+function handleVolume({ guild, reply, percent }) {
+  if (!guild) {
+    return reply('This command only works in a server.');
+  }
+  const queue = getQueue(guild.id);
+  const normalized = parseVolumePercent(percent);
+  if (normalized === null) {
+    return reply(`Volume: ${formatVolumePercent(queue.getVolume())}%`);
+  }
+  const volume = normalized / 100;
+  queue.setVolume(volume);
+  return reply(`Volume set to ${normalized}%.`);
 }
 
 function handleAbout({ reply }) {
@@ -438,6 +488,15 @@ client.on('interactionCreate', async (interaction) => {
       case 'lulaye':
         await handleLulaye(interaction);
         break;
+      case 'volume': {
+        const percent = interaction.options.getInteger('percent');
+        await handleVolume({
+          guild: interaction.guild,
+          reply,
+          percent: typeof percent === 'number' ? percent : null
+        });
+        break;
+      }
       case 'about':
         await handleAbout({ reply });
         break;
@@ -498,6 +557,15 @@ client.on('messageCreate', async (message) => {
       case 'now':
         await handleNow({ guild: message.guild, reply });
         break;
+      case 'volume': {
+        const raw = args ? Number(args) : NaN;
+        await handleVolume({
+          guild: message.guild,
+          reply,
+          percent: Number.isFinite(raw) ? raw : null
+        });
+        break;
+      }
       case 'about':
         await handleAbout({ reply });
         break;

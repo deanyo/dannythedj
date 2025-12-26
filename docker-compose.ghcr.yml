@@ -8,4 +8,6 @@ services:
       CLIENT_ID: ${CLIENT_ID}
       GUILD_ID: ${GUILD_ID}
       LOG_LEVEL: ${LOG_LEVEL}
+      DEFAULT_VOLUME: ${DEFAULT_VOLUME}
+      IDLE_DISCONNECT_SECONDS: ${IDLE_DISCONNECT_SECONDS}
     restart: unless-stopped

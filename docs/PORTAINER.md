@@ -34,6 +34,8 @@ services:
    - `CLIENT_ID`
    - `GUILD_ID` (optional)
    - `LOG_LEVEL` (optional, `info` or `debug`)
+   - `DEFAULT_VOLUME` (optional, 0-200)
+   - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
 6) Deploy the stack.
 
 ## Option B: Private GitHub Repo (Portainer Git Stack)
@@ -47,6 +49,8 @@ services:
    - `CLIENT_ID`
    - `GUILD_ID` (optional)
    - `LOG_LEVEL` (optional, `info` or `debug`)
+   - `DEFAULT_VOLUME` (optional, 0-200)
+   - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
 7) Deploy the stack.
 
 ## Option C: GHCR Image (recommended)
@@ -77,6 +81,8 @@ services:
    - `GUILD_ID` (optional)
    - `IMAGE_TAG` (optional, defaults to `latest`; use `v1.2.3` for pinned releases)
    - `LOG_LEVEL` (optional, `info` or `debug`)
+   - `DEFAULT_VOLUME` (optional, 0-200)
+   - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
 6) Deploy the stack.
 
 ## Option D: Prebuild on Mac, Run on NAS

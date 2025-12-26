@@ -66,17 +66,20 @@ npm start
 
 ## Usage
 
-- Slash commands: `/play <url>`, `/skip`, `/pause`, `/resume`, `/stop`, `/queue`, `/now`, `/pump`, `/lulaye`, `/about`, `/debug`
-- Mention commands: `@Bot play <url>`, `@Bot skip`, `@Bot queue`
+- Slash commands: `/play <url>`, `/skip`, `/pause`, `/resume`, `/stop`, `/queue`, `/now`, `/pump`, `/lulaye`, `/about`, `/debug`, `/volume`
+- Mention commands: `@Bot play <url>`, `@Bot skip`, `@Bot queue`, `@Bot volume 80`
 
 If you pass text instead of a URL, the bot uses `yt-dlp` search (`ytsearch1:`)
 and queues the first result.
 
 `/debug` requires Manage Server permissions and responds ephemerally.
+`/volume` accepts 0-200 (100 is default).
 
 ## Optional Configuration
 
 - `LOG_LEVEL`: `info` (default) or `debug`
+- `DEFAULT_VOLUME`: 0-200 (default 100)
+- `IDLE_DISCONNECT_SECONDS`: idle timeout before leaving voice (default 300)
 - `HEALTHCHECK_PATH`: file updated by the bot for container healthchecks
 - `HEALTHCHECK_MAX_AGE_SECONDS`: max age before healthcheck fails (default 120)
 

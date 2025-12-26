@@ -93,7 +93,7 @@ async function resolveTracks(input) {
   return track ? [track] : [];
 }
 
-async function createAudioResourceFromUrl(url) {
+async function createAudioResourceFromUrl(url, volume) {
   return new Promise((resolve, reject) => {
     const args = [
       '-f',
@@ -139,10 +139,14 @@ async function createAudioResourceFromUrl(url) {
           return;
         }
         settled = true;
-        resolve({
-          resource: createAudioResource(stream, { inputType: type }),
-          process: child
+        const resource = createAudioResource(stream, {
+          inputType: type,
+          inlineVolume: true
         });
+        if (resource.volume && Number.isFinite(volume)) {
+          resource.volume.setVolume(volume);
+        }
+        resolve({ resource, process: child });
       })
       .catch(fail);
   });

@@ -51,6 +51,17 @@ const commandBuilders = [
           { name: 'status', value: 'status' }
         )
         .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('volume')
+    .setDescription('Set or show playback volume')
+    .addIntegerOption((option) =>
+      option
+        .setName('percent')
+        .setDescription('0-200 (100 is default)')
+        .setMinValue(0)
+        .setMaxValue(200)
+        .setRequired(false)
     )
 ];
 

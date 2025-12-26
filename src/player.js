@@ -10,14 +10,22 @@ const { createAudioResourceFromUrl } = require('./yt');
 const logger = require('./logger');
 
 class GuildQueue {
-  constructor(guildId) {
+  constructor(guildId, options = {}) {
     this.guildId = guildId;
     this.queue = [];
     this.current = null;
     this.currentProcess = null;
+    this.currentResource = null;
     this.textChannel = null;
     this.processing = false;
     this.connection = null;
+    this.idleTimer = null;
+    this.idleDisconnectMs = Number.isFinite(options.idleDisconnectMs)
+      ? options.idleDisconnectMs
+      : 0;
+    this.volume = Number.isFinite(options.defaultVolume)
+      ? options.defaultVolume
+      : 1;
     this.player = createAudioPlayer({
       behaviors: {
         noSubscriber: NoSubscriberBehavior.Pause
@@ -30,6 +38,9 @@ class GuildQueue {
       this._playNext().catch((error) => {
         logger.error(`[queue:${this.guildId}] idle handler failed`, error);
       });
+      if (!this.current && this.queue.length === 0) {
+        this._scheduleIdleDisconnect();
+      }
     });
 
     this.player.on('error', (error) => {
@@ -50,6 +61,7 @@ class GuildQueue {
       return;
     }
 
+    this._clearIdleTimer();
     this.connection = joinVoiceChannel({
       channelId: voiceChannel.id,
       guildId: voiceChannel.guild.id,
@@ -70,6 +82,7 @@ class GuildQueue {
       requestedBy: requestedBy?.tag || 'unknown'
     }));
     this.queue.push(...enriched);
+    this._clearIdleTimer();
     this._playNext().catch((error) => {
       logger.error(`[queue:${this.guildId}] enqueue failed`, error);
     });
@@ -97,6 +110,7 @@ class GuildQueue {
 
   destroy() {
     this.stop();
+    this._clearIdleTimer();
     if (this.connection) {
       this.connection.destroy();
       this.connection = null;
@@ -118,8 +132,13 @@ class GuildQueue {
     this.processing = true;
     let shouldContinue = false;
     try {
-      const { resource, process } = await createAudioResourceFromUrl(next.url);
+      this._clearIdleTimer();
+      const { resource, process } = await createAudioResourceFromUrl(
+        next.url,
+        this.volume
+      );
       this.currentProcess = process;
+      this.currentResource = resource;
       this.current = next;
       this.player.play(resource);
       if (this.textChannel) {
@@ -149,6 +168,47 @@ class GuildQueue {
       this.currentProcess.kill('SIGKILL');
     }
     this.currentProcess = null;
+    this.currentResource = null;
+  }
+
+  setVolume(volume) {
+    if (!Number.isFinite(volume)) {
+      return this.volume;
+    }
+    this.volume = volume;
+    if (this.currentResource?.volume) {
+      this.currentResource.volume.setVolume(volume);
+    }
+    return this.volume;
+  }
+
+  getVolume() {
+    return this.volume;
+  }
+
+  _scheduleIdleDisconnect() {
+    if (!this.idleDisconnectMs || this.idleTimer || !this.connection) {
+      return;
+    }
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = null;
+      if (this.queue.length > 0 || this.current) {
+        return;
+      }
+      if (this.textChannel) {
+        this.textChannel
+          .send('Queue idle. Leaving voice channel.')
+          .catch(() => null);
+      }
+      this.destroy();
+    }, this.idleDisconnectMs);
+  }
+
+  _clearIdleTimer() {
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = null;
+    }
   }
 }
 
