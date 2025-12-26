@@ -4,8 +4,10 @@
 - `src/index.js` boots the Discord client and wires commands.
 - `src/player.js` owns the guild queue and voice playback.
 - `src/yt.js` wraps `yt-dlp` for resolving tracks and streaming audio.
+- `src/logger.js` centralizes log level handling.
 - `src/commands.js` defines slash command schemas.
 - `scripts/register-commands.js` registers commands with Discord.
+- `scripts/healthcheck.js` powers the container healthcheck.
 - Configuration lives in `.env` (see `.env.example`).
 
 ## Build, Test, and Development Commands

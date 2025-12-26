@@ -70,6 +70,8 @@ npm start
 If you pass text instead of a URL, the bot uses `yt-dlp` search (`ytsearch1:`)
 and queues the first result.
 
+`/debug` requires Manage Server permissions and responds ephemerally.
+
 ## Optional Configuration
 
 - `LOG_LEVEL`: `info` (default) or `debug`
