@@ -1,8 +1,8 @@
 # Danny the DJ
 
-[![CI](https://github.com/deanyo/dannythedj/actions/workflows/ci.yml/badge.svg)](https://github.com/deanyo/dannythedj/actions/workflows/ci.yml)
-[![Docker](https://github.com/deanyo/dannythedj/actions/workflows/docker.yml/badge.svg)](https://github.com/deanyo/dannythedj/actions/workflows/docker.yml)
-[![Publish](https://github.com/deanyo/dannythedj/actions/workflows/publish.yml/badge.svg)](https://github.com/deanyo/dannythedj/actions/workflows/publish.yml)
+[![CI](https://github.com/deanyo/dannythedj/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/deanyo/dannythedj/actions/workflows/ci.yml)
+[![Docker](https://github.com/deanyo/dannythedj/actions/workflows/docker.yml/badge.svg?branch=main)](https://github.com/deanyo/dannythedj/actions/workflows/docker.yml)
+[![Publish](https://github.com/deanyo/dannythedj/actions/workflows/publish.yml/badge.svg?branch=main)](https://github.com/deanyo/dannythedj/actions/workflows/publish.yml)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Discord YT music bot focused on YouTube playback via `yt-dlp`. Supports
