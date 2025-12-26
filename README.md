@@ -13,7 +13,7 @@ single videos, Shorts, and playlist URLs. Commands work as slash commands
 
 ## Requirements
 
-- Node.js 18+
+- Node.js 22.12+
 - `yt-dlp` in PATH
 - `ffmpeg` in PATH
 - Discord bot token + application client ID

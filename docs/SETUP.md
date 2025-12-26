@@ -1,7 +1,7 @@
 # Local Setup Guide
 
 ## Prerequisites
-- Node.js 18+
+- Node.js 22.12+
 - `yt-dlp` and `ffmpeg` available in PATH
 - A Discord application with a bot token
 
