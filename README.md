@@ -5,6 +5,8 @@
 [![Publish](https://github.com/deanyo/dannythedj/actions/workflows/publish.yml/badge.svg?branch=main)](https://github.com/deanyo/dannythedj/actions/workflows/publish.yml)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+![Danny the DJ icon](https://cdn.discordapp.com/app-icons/721847654186745958/fe00576377c406e8fd327eb3e722b145.png?size=512)
+
 Discord YT music bot focused on YouTube playback via `yt-dlp`. Supports
 single videos, Shorts, and playlist URLs. Commands work as slash commands
 (`/play`) or by mentioning the bot (e.g. `@Danny the DJ play <url>`).
