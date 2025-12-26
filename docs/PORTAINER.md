@@ -57,7 +57,7 @@ version: "3.8"
 
 services:
   musicbot:
-    image: ghcr.io/deanyo/dannythedj:latest
+    image: ghcr.io/deanyo/dannythedj:${IMAGE_TAG:-latest}
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       CLIENT_ID: ${CLIENT_ID}
@@ -73,6 +73,7 @@ services:
    - `DISCORD_TOKEN`
    - `CLIENT_ID`
    - `GUILD_ID` (optional)
+   - `IMAGE_TAG` (optional, defaults to `latest`; use `v1.2.3` for pinned releases)
 6) Deploy the stack.
 
 ## Option D: Prebuild on Mac, Run on NAS

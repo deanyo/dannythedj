@@ -96,3 +96,6 @@ To pull the published image (GHCR):
 docker pull ghcr.io/deanyo/dannythedj:latest
 docker run --env-file .env ghcr.io/deanyo/dannythedj:latest
 ```
+
+To publish a versioned image, create a git tag like `v1.0.0` and push it.
+GHCR will receive both `v1.0.0` and the commit SHA tags automatically.

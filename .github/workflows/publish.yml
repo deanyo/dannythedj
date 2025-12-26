@@ -3,6 +3,8 @@ name: Publish Docker Image
 on:
   push:
     branches: [main]
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -29,7 +31,8 @@ jobs:
         with:
           images: ghcr.io/deanyo/dannythedj
           tags: |
-            type=raw,value=latest
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
             type=sha
       - name: Build and push
         uses: docker/build-push-action@v6
