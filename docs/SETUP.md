@@ -18,6 +18,7 @@
    - `LOG_LEVEL=info` (optional)
    - `DEFAULT_VOLUME=100` (optional)
    - `IDLE_DISCONNECT_SECONDS=5` (optional)
+   - `STREAM_START_TIMEOUT_MS=15000` (optional)
 2) Install dependencies:
 
 ```sh

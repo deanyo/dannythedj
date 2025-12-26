@@ -32,6 +32,10 @@ const IDLE_DISCONNECT_MS =
   Number.isFinite(IDLE_DISCONNECT_SECONDS) && IDLE_DISCONNECT_SECONDS > 0
     ? IDLE_DISCONNECT_SECONDS * 1000
     : 0;
+const STREAM_TIMEOUT_RAW = Number(process.env.STREAM_START_TIMEOUT_MS);
+const STREAM_TIMEOUT_MS = Number.isFinite(STREAM_TIMEOUT_RAW)
+  ? STREAM_TIMEOUT_RAW
+  : 15_000;
 
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
@@ -55,7 +59,8 @@ function getQueue(guildId) {
   if (!queue) {
     queue = new GuildQueue(guildId, {
       idleDisconnectMs: IDLE_DISCONNECT_MS,
-      defaultVolume: DEFAULT_VOLUME
+      defaultVolume: DEFAULT_VOLUME,
+      streamTimeoutMs: STREAM_TIMEOUT_MS
     });
     queues.set(guildId, queue);
   }

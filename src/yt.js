@@ -105,8 +105,13 @@ async function resolveTracks(input) {
   return [];
 }
 
-async function createAudioResourceFromUrl(url, volume) {
+const DEFAULT_STREAM_TIMEOUT_MS = Number(process.env.STREAM_START_TIMEOUT_MS) || 15_000;
+
+async function createAudioResourceFromUrl(url, volume, options = {}) {
   return new Promise((resolve, reject) => {
+    const timeoutMs = Number.isFinite(options.timeoutMs)
+      ? options.timeoutMs
+      : DEFAULT_STREAM_TIMEOUT_MS;
     const args = [
       '-f',
       'bestaudio',
@@ -119,12 +124,17 @@ async function createAudioResourceFromUrl(url, volume) {
     ];
     const child = spawn('yt-dlp', args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let settled = false;
+    let stderr = '';
+    let timeoutId = null;
 
     const fail = (error) => {
       if (settled) {
         return;
       }
       settled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       if (child && !child.killed) {
         child.kill('SIGKILL');
       }
@@ -139,11 +149,25 @@ async function createAudioResourceFromUrl(url, volume) {
       );
     });
 
-    child.on('close', (code) => {
-      if (code !== 0) {
-        fail(new Error(`yt-dlp exited with code ${code}.`));
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      if (stderr.length > 2000) {
+        stderr = stderr.slice(-2000);
       }
     });
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        const extra = stderr ? ` ${stderr.trim()}` : '';
+        fail(new Error(`yt-dlp exited with code ${code}.${extra}`));
+      }
+    });
+
+    if (timeoutMs > 0) {
+      timeoutId = setTimeout(() => {
+        fail(new Error(`yt-dlp timed out after ${timeoutMs}ms.`));
+      }, timeoutMs);
+    }
 
     demuxProbe(child.stdout)
       .then(({ stream, type }) => {
@@ -151,6 +175,9 @@ async function createAudioResourceFromUrl(url, volume) {
           return;
         }
         settled = true;
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
         const resource = createAudioResource(stream, {
           inputType: type,
           inlineVolume: true

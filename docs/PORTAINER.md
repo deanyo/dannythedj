@@ -36,6 +36,7 @@ services:
    - `LOG_LEVEL` (optional, `info` or `debug`)
    - `DEFAULT_VOLUME` (optional, 0-200)
    - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
+   - `STREAM_START_TIMEOUT_MS` (optional, ms)
 6) Deploy the stack.
 
 ## Option B: Private GitHub Repo (Portainer Git Stack)
@@ -51,6 +52,7 @@ services:
    - `LOG_LEVEL` (optional, `info` or `debug`)
    - `DEFAULT_VOLUME` (optional, 0-200)
    - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
+   - `STREAM_START_TIMEOUT_MS` (optional, ms)
 7) Deploy the stack.
 
 ## Option C: GHCR Image (recommended)
@@ -83,6 +85,7 @@ services:
    - `LOG_LEVEL` (optional, `info` or `debug`)
    - `DEFAULT_VOLUME` (optional, 0-200)
    - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
+   - `STREAM_START_TIMEOUT_MS` (optional, ms)
 6) Deploy the stack.
 
 ## Option D: Prebuild on Mac, Run on NAS

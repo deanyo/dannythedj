@@ -26,6 +26,9 @@ class GuildQueue {
     this.volume = Number.isFinite(options.defaultVolume)
       ? options.defaultVolume
       : 1;
+    this.streamTimeoutMs = Number.isFinite(options.streamTimeoutMs)
+      ? options.streamTimeoutMs
+      : 15_000;
     this.player = createAudioPlayer({
       behaviors: {
         noSubscriber: NoSubscriberBehavior.Pause
@@ -133,9 +136,11 @@ class GuildQueue {
     let shouldContinue = false;
     try {
       this._clearIdleTimer();
+      logger.debug(`[queue:${this.guildId}] starting: ${next.title}`);
       const { resource, process } = await createAudioResourceFromUrl(
         next.url,
-        this.volume
+        this.volume,
+        { timeoutMs: this.streamTimeoutMs }
       );
       this.currentProcess = process;
       this.currentResource = resource;
@@ -152,6 +157,11 @@ class GuildQueue {
       logger.error(`[queue:${this.guildId}] failed to play`, error);
       this.current = null;
       this._cleanupProcess();
+      if (this.textChannel) {
+        this.textChannel
+          .send(`Failed to play **${next.title}**. Skipping.`)
+          .catch(() => null);
+      }
       shouldContinue = true;
     } finally {
       this.processing = false;
