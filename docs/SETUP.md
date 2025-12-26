@@ -15,6 +15,7 @@
    - `DISCORD_TOKEN=...`
    - `CLIENT_ID=...` (Application ID)
    - `GUILD_ID=...` (optional, speeds up command registration)
+   - `LOG_LEVEL=info` (optional)
 2) Install dependencies:
 
 ```sh

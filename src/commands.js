@@ -33,7 +33,25 @@ const commandBuilders = [
     .setDescription('Play the Pump playlist'),
   new SlashCommandBuilder()
     .setName('lulaye')
-    .setDescription('Get a lulaye DM link')
+    .setDescription('Get a lulaye DM link'),
+  new SlashCommandBuilder()
+    .setName('about')
+    .setDescription('Show bot info and status'),
+  new SlashCommandBuilder()
+    .setName('debug')
+    .setDescription('Toggle debug logging (Manage Server)')
+    .addStringOption((option) =>
+      option
+        .setName('mode')
+        .setDescription('on, off, toggle, or status')
+        .addChoices(
+          { name: 'on', value: 'on' },
+          { name: 'off', value: 'off' },
+          { name: 'toggle', value: 'toggle' },
+          { name: 'status', value: 'status' }
+        )
+        .setRequired(false)
+    )
 ];
 
 module.exports = {

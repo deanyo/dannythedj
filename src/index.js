@@ -1,16 +1,21 @@
 require('dotenv').config();
 
-const { Client, GatewayIntentBits } = require('discord.js');
+const { writeFile } = require('node:fs/promises');
+const { Client, GatewayIntentBits, PermissionsBitField } = require('discord.js');
 const { GuildQueue } = require('./player');
 const { resolveTracks } = require('./yt');
+const logger = require('./logger');
+const packageInfo = require('../package.json');
 
 const PUMP_PLAYLIST_URL =
   'https://www.youtube.com/watch?v=mpG0ax0uAdo&list=PL0nMuMH24oIbUUo0BCFWcPRnQh2zdx2pP';
 const LULAYE_URL = 'https://www.youtube.com/watch?v=VKAv2AHIKEw';
+const HEALTHCHECK_PATH =
+  process.env.HEALTHCHECK_PATH || '/tmp/musicbot-healthcheck';
 
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
-  console.error('Missing DISCORD_TOKEN in environment.');
+  logger.error('Missing DISCORD_TOKEN in environment.');
   process.exit(1);
 }
 
@@ -46,6 +51,29 @@ function formatDuration(seconds) {
     return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
   return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+function formatUptime(seconds) {
+  if (!Number.isFinite(seconds)) {
+    return 'unknown';
+  }
+  const total = Math.max(0, Math.floor(seconds));
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  const parts = [];
+  if (days > 0) {
+    parts.push(`${days}d`);
+  }
+  if (hours > 0 || parts.length > 0) {
+    parts.push(`${hours}h`);
+  }
+  if (minutes > 0 || parts.length > 0) {
+    parts.push(`${minutes}m`);
+  }
+  parts.push(`${secs}s`);
+  return parts.join(' ');
 }
 
 function formatTrackLine(track, index, options = {}) {
@@ -164,7 +192,7 @@ async function handlePlay({ guild, member, channel, reply, input }) {
   try {
     await queue.connect(voiceChannel);
   } catch (error) {
-    console.error(`[queue:${guild.id}] failed to connect`, error);
+    logger.error(`[queue:${guild.id}] failed to connect`, error);
     return reply('Failed to join your voice channel.');
   }
 
@@ -172,7 +200,7 @@ async function handlePlay({ guild, member, channel, reply, input }) {
   try {
     tracks = await resolveTracks(input);
   } catch (error) {
-    console.error(`[queue:${guild.id}] failed to resolve`, error);
+    logger.error(`[queue:${guild.id}] failed to resolve`, error);
     return reply('Could not resolve that YouTube input.');
   }
 
@@ -191,12 +219,65 @@ function handlePump(payload) {
   return handlePlay({ ...payload, input: PUMP_PLAYLIST_URL });
 }
 
+function handleAbout({ reply }) {
+  const lines = [
+    `Danny the DJ v${packageInfo.version}`,
+    `Uptime: ${formatUptime(process.uptime())}`,
+    `Log level: ${logger.getLevel()}`,
+    `Node: ${process.version}`
+  ];
+  const commit = process.env.GIT_SHA || process.env.SOURCE_VERSION;
+  if (commit) {
+    lines.push(`Commit: ${commit.slice(0, 12)}`);
+  }
+  return reply(lines.join('\n'));
+}
+
+async function handleDebug(interaction) {
+  if (!interaction.memberPermissions?.has(PermissionsBitField.Flags.ManageGuild)) {
+    return interaction.reply({
+      content: 'You need Manage Server to change debug logging.',
+      ephemeral: true
+    });
+  }
+
+  const mode = interaction.options.getString('mode') || 'toggle';
+  const current = logger.getLevel();
+  let next = current;
+
+  switch (mode) {
+    case 'on':
+      next = 'debug';
+      break;
+    case 'off':
+      next = 'info';
+      break;
+    case 'toggle':
+      next = current === 'debug' ? 'info' : 'debug';
+      break;
+    case 'status':
+      break;
+    default:
+      next = current;
+  }
+
+  if (next !== current) {
+    logger.setLevel(next);
+    logger.info(`Log level set to ${next} by ${interaction.user.tag}`);
+  }
+
+  return interaction.reply({
+    content: `Log level: ${logger.getLevel()}`,
+    ephemeral: true
+  });
+}
+
 async function handleLulaye(interaction) {
   try {
     await interaction.user.send(`Here you go: ${LULAYE_URL}`);
     await interaction.reply({ content: 'Sent you a DM.', ephemeral: true });
   } catch (error) {
-    console.error('Failed to DM lulaye link', error);
+    logger.error('Failed to DM lulaye link', error);
     const message = 'I could not DM you. Please enable DMs from server members.';
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply({ content: message });
@@ -204,6 +285,21 @@ async function handleLulaye(interaction) {
       await interaction.reply({ content: message, ephemeral: true });
     }
   }
+}
+
+async function touchHealthcheck() {
+  try {
+    await writeFile(HEALTHCHECK_PATH, `${Date.now()}`);
+  } catch (error) {
+    logger.debug('Failed to write healthcheck file', error);
+  }
+}
+
+function startHealthcheck() {
+  touchHealthcheck();
+  setInterval(() => {
+    touchHealthcheck();
+  }, 30_000);
 }
 
 function handleSkip({ guild, reply }) {
@@ -272,7 +368,8 @@ function parseMentionCommand(content) {
 }
 
 client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}`);
+  logger.info(`Logged in as ${client.user.tag}`);
+  startHealthcheck();
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -330,11 +427,17 @@ client.on('interactionCreate', async (interaction) => {
       case 'lulaye':
         await handleLulaye(interaction);
         break;
+      case 'about':
+        await handleAbout({ reply });
+        break;
+      case 'debug':
+        await handleDebug(interaction);
+        break;
       default:
         await reply('Unknown command.');
     }
   } catch (error) {
-    console.error('Interaction handler error', error);
+    logger.error('Interaction handler error', error);
     await reply('Something went wrong handling that command.');
   }
 });
@@ -384,11 +487,17 @@ client.on('messageCreate', async (message) => {
       case 'now':
         await handleNow({ guild: message.guild, reply });
         break;
+      case 'about':
+        await handleAbout({ reply });
+        break;
+      case 'debug':
+        await reply('Use `/debug` (Manage Server permission required).');
+        break;
       default:
         await reply('Try `@Bot play <url>` or `/play <url>`.');
     }
   } catch (error) {
-    console.error('Message handler error', error);
+    logger.error('Message handler error', error);
     await reply('Something went wrong handling that command.');
   }
 });

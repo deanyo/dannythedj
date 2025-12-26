@@ -7,6 +7,7 @@ const {
   joinVoiceChannel
 } = require('@discordjs/voice');
 const { createAudioResourceFromUrl } = require('./yt');
+const logger = require('./logger');
 
 class GuildQueue {
   constructor(guildId) {
@@ -27,16 +28,16 @@ class GuildQueue {
       this._cleanupProcess();
       this.current = null;
       this._playNext().catch((error) => {
-        console.error(`[queue:${this.guildId}] idle handler failed`, error);
+        logger.error(`[queue:${this.guildId}] idle handler failed`, error);
       });
     });
 
     this.player.on('error', (error) => {
-      console.error(`[queue:${this.guildId}] audio player error`, error);
+      logger.error(`[queue:${this.guildId}] audio player error`, error);
       this._cleanupProcess();
       this.current = null;
       this._playNext().catch((nextError) => {
-        console.error(`[queue:${this.guildId}] recovery failed`, nextError);
+        logger.error(`[queue:${this.guildId}] recovery failed`, nextError);
       });
     });
   }
@@ -70,7 +71,7 @@ class GuildQueue {
     }));
     this.queue.push(...enriched);
     this._playNext().catch((error) => {
-      console.error(`[queue:${this.guildId}] enqueue failed`, error);
+      logger.error(`[queue:${this.guildId}] enqueue failed`, error);
     });
     return enriched.length;
   }
@@ -129,7 +130,7 @@ class GuildQueue {
           .catch(() => null);
       }
     } catch (error) {
-      console.error(`[queue:${this.guildId}] failed to play`, error);
+      logger.error(`[queue:${this.guildId}] failed to play`, error);
       this.current = null;
       this._cleanupProcess();
       shouldContinue = true;
@@ -137,7 +138,7 @@ class GuildQueue {
       this.processing = false;
       if (shouldContinue) {
         this._playNext().catch((nextError) => {
-          console.error(`[queue:${this.guildId}] recovery failed`, nextError);
+          logger.error(`[queue:${this.guildId}] recovery failed`, nextError);
         });
       }
     }

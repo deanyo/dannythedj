@@ -33,6 +33,7 @@ services:
    - `DISCORD_TOKEN`
    - `CLIENT_ID`
    - `GUILD_ID` (optional)
+   - `LOG_LEVEL` (optional, `info` or `debug`)
 6) Deploy the stack.
 
 ## Option B: Private GitHub Repo (Portainer Git Stack)
@@ -45,6 +46,7 @@ services:
    - `DISCORD_TOKEN`
    - `CLIENT_ID`
    - `GUILD_ID` (optional)
+   - `LOG_LEVEL` (optional, `info` or `debug`)
 7) Deploy the stack.
 
 ## Option C: GHCR Image (recommended)
@@ -74,6 +76,7 @@ services:
    - `CLIENT_ID`
    - `GUILD_ID` (optional)
    - `IMAGE_TAG` (optional, defaults to `latest`; use `v1.2.3` for pinned releases)
+   - `LOG_LEVEL` (optional, `info` or `debug`)
 6) Deploy the stack.
 
 ## Option D: Prebuild on Mac, Run on NAS

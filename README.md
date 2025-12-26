@@ -64,11 +64,17 @@ npm start
 
 ## Usage
 
-- Slash commands: `/play <url>`, `/skip`, `/pause`, `/resume`, `/stop`, `/queue`, `/now`, `/pump`, `/lulaye`
+- Slash commands: `/play <url>`, `/skip`, `/pause`, `/resume`, `/stop`, `/queue`, `/now`, `/pump`, `/lulaye`, `/about`, `/debug`
 - Mention commands: `@Bot play <url>`, `@Bot skip`, `@Bot queue`
 
 If you pass text instead of a URL, the bot uses `yt-dlp` search (`ytsearch1:`)
 and queues the first result.
+
+## Optional Configuration
+
+- `LOG_LEVEL`: `info` (default) or `debug`
+- `HEALTHCHECK_PATH`: file updated by the bot for container healthchecks
+- `HEALTHCHECK_MAX_AGE_SECONDS`: max age before healthcheck fails (default 120)
 
 ## Additional Docs
 
