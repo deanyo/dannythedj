@@ -1,5 +1,10 @@
 const { spawn } = require('node:child_process');
-const { createAudioResource, demuxProbe } = require('@discordjs/voice');
+const {
+  StreamType,
+  createAudioResource,
+  demuxProbe
+} = require('@discordjs/voice');
+const logger = require('./logger');
 
 const URL_PATTERN = /^(https?:\/\/|www\.)/i;
 
@@ -137,7 +142,10 @@ async function createAudioResourceFromUrl(url, volume, options = {}) {
     const child = spawn('yt-dlp', args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let settled = false;
     let stderr = '';
+    let receivedData = false;
     let timeoutId = null;
+
+    logger.debug(`[yt-dlp] starting for ${url} (timeout ${timeoutMs}ms)`);
 
     const fail = (error) => {
       if (settled) {
@@ -168,10 +176,24 @@ async function createAudioResourceFromUrl(url, volume, options = {}) {
       }
     });
 
+    child.stdout.on('data', () => {
+      if (!receivedData) {
+        receivedData = true;
+        logger.debug(`[yt-dlp] received audio data for ${url}`);
+      }
+    });
+
     child.on('close', (code) => {
+      if (settled) {
+        return;
+      }
       if (code !== 0) {
         const extra = stderr ? ` ${stderr.trim()}` : '';
         fail(new Error(`yt-dlp exited with code ${code}.${extra}`));
+        return;
+      }
+      if (!receivedData) {
+        fail(new Error('yt-dlp exited before producing audio data.'));
       }
     });
 
@@ -190,6 +212,7 @@ async function createAudioResourceFromUrl(url, volume, options = {}) {
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
+        logger.debug(`[yt-dlp] demux probe resolved (${type})`);
         const resource = createAudioResource(stream, {
           inputType: type,
           inlineVolume: true
@@ -199,7 +222,26 @@ async function createAudioResourceFromUrl(url, volume, options = {}) {
         }
         resolve({ resource, process: child });
       })
-      .catch(fail);
+      .catch((error) => {
+        if (settled) {
+          return;
+        }
+        logger.warn(
+          `[yt-dlp] demux probe failed, falling back to ffmpeg: ${error.message}`
+        );
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        const resource = createAudioResource(child.stdout, {
+          inputType: StreamType.Arbitrary,
+          inlineVolume: true
+        });
+        if (resource.volume && Number.isFinite(volume)) {
+          resource.volume.setVolume(volume);
+        }
+        settled = true;
+        resolve({ resource, process: child });
+      });
   });
 }
 

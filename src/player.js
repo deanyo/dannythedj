@@ -35,15 +35,29 @@ class GuildQueue {
       }
     });
 
+    this.player.on(AudioPlayerStatus.Playing, () => {
+      logger.debug(`[queue:${this.guildId}] audio player status: playing`);
+    });
+
+    this.player.on(AudioPlayerStatus.AutoPaused, () => {
+      logger.warn(`[queue:${this.guildId}] audio player auto-paused`);
+    });
+
     this.player.on(AudioPlayerStatus.Idle, () => {
       this._cleanupProcess();
       this.current = null;
-      this._playNext().catch((error) => {
-        logger.error(`[queue:${this.guildId}] idle handler failed`, error);
-      });
-      if (!this.current && this.queue.length === 0) {
-        this._scheduleIdleDisconnect();
-      }
+      this._playNext()
+        .then(() => {
+          if (!this.current && this.queue.length === 0) {
+            this._scheduleIdleDisconnect();
+          }
+        })
+        .catch((error) => {
+          logger.error(`[queue:${this.guildId}] idle handler failed`, error);
+          if (!this.current && this.queue.length === 0) {
+            this._scheduleIdleDisconnect();
+          }
+        });
     });
 
     this.player.on('error', (error) => {
