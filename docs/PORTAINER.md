@@ -114,6 +114,22 @@ gunzip -c musicbot.tar.gz | docker load
 - If you use playlist-heavy queues, ensure enough CPU headroom for `yt-dlp`.
 - To update: rebuild the image and redeploy the stack.
 
+## Updating the Stack
+Choose the path that matches how you deployed:
+
+GHCR image (Option C)
+1) Open the stack in Portainer and click **Update the stack**.
+2) If you use `latest`, check **Pull latest image** and deploy.
+3) If you pin a release, update `IMAGE_TAG` (e.g., `v1.2.3`) and deploy.
+
+Git repository stack (Option B)
+1) Open the stack and click **Update the stack**.
+2) Ensure **Pull latest changes** is enabled, then deploy.
+
+Local build/upload (Option A)
+1) Rebuild the image on the NAS or re-upload the repo.
+2) Click **Update the stack** to redeploy.
+
 ## Troubleshooting
 - Bot shows "application did not respond": verify it is running and has
   `Send Messages` + `Use Application Commands` in the channel.
