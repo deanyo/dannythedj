@@ -19,6 +19,9 @@
    - `DEFAULT_VOLUME=100` (optional)
    - `IDLE_DISCONNECT_SECONDS=5` (optional)
    - `STREAM_START_TIMEOUT_MS=15000` (optional)
+   - `YTDLP_COOKIES_PATH=/path/to/youtube-cookies.txt` (optional)
+   - `YTDLP_COOKIES_FROM_BROWSER=chrome` (optional)
+   - `YTDLP_PROXY=http://user:pass@host:port` (optional)
 2) Install dependencies:
 
 ```sh
@@ -48,6 +51,30 @@ npm start
 ## Troubleshooting
 - If slash commands do not appear, re-run `npm run register-commands`.
 - If audio fails, confirm `yt-dlp` and `ffmpeg` run in your terminal.
+
+## YouTube Cookies (age/region/private videos)
+yt-dlp can use your logged-in YouTube session cookies to unlock age-restricted,
+private, or region-locked content (if your account has access).
+
+Option A: Export cookies to a file
+1) Sign into YouTube in your browser.
+2) Use a cookies export extension (for example: "Get cookies.txt" on Chrome,
+   or "cookies.txt" on Firefox).
+3) Export cookies for `youtube.com` and save the file locally.
+4) Set `YTDLP_COOKIES_PATH` to the file path and restart the bot.
+
+Option B: Import cookies from a browser profile
+1) Sign into YouTube in your browser.
+2) Set `YTDLP_COOKIES_FROM_BROWSER` to a supported browser name such as
+   `chrome`, `edge`, or `firefox`.
+3) (Optional) Use a specific profile: `chrome:Profile 1`.
+
+Notes
+- Keep cookies private; they grant access to your account.
+- For Docker, mount the cookies file and point `YTDLP_COOKIES_PATH` to the
+  mounted path in the container.
+- If you set both `YTDLP_COOKIES_PATH` and `YTDLP_COOKIES_FROM_BROWSER`, the
+  bot prefers `YTDLP_COOKIES_PATH`.
 
 ## Docker Notes
 Docker files are included and install `yt-dlp` + `ffmpeg`.

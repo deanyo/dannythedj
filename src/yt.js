@@ -7,6 +7,35 @@ const {
 const logger = require('./logger');
 
 const URL_PATTERN = /^(https?:\/\/|www\.)/i;
+const YTDLP_COOKIES_PATH = process.env.YTDLP_COOKIES_PATH;
+const YTDLP_COOKIES_FROM_BROWSER = process.env.YTDLP_COOKIES_FROM_BROWSER;
+const YTDLP_PROXY = process.env.YTDLP_PROXY;
+const YTDLP_EXTRA_ARGS = buildYtDlpExtraArgs();
+
+function buildYtDlpExtraArgs() {
+  const args = [];
+  if (YTDLP_COOKIES_PATH && YTDLP_COOKIES_FROM_BROWSER) {
+    logger.warn(
+      'Both YTDLP_COOKIES_PATH and YTDLP_COOKIES_FROM_BROWSER are set. Using YTDLP_COOKIES_PATH.'
+    );
+  }
+  if (YTDLP_COOKIES_PATH) {
+    args.push('--cookies', YTDLP_COOKIES_PATH);
+  } else if (YTDLP_COOKIES_FROM_BROWSER) {
+    args.push('--cookies-from-browser', YTDLP_COOKIES_FROM_BROWSER);
+  }
+  if (YTDLP_PROXY) {
+    args.push('--proxy', YTDLP_PROXY);
+  }
+  return args;
+}
+
+function buildYtDlpArgs(args) {
+  if (YTDLP_EXTRA_ARGS.length === 0) {
+    return args;
+  }
+  return [...YTDLP_EXTRA_ARGS, ...args];
+}
 
 function isLikelyUrl(input) {
   if (!input) {
@@ -55,12 +84,11 @@ function toTrack(entry) {
 
 function runYtDlpJson(input) {
   return new Promise((resolve, reject) => {
-    const args = [
+    const args = buildYtDlpArgs([
       '--dump-single-json',
       '--no-warnings',
-      '--no-call-home',
       input
-    ];
+    ]);
     const child = spawn('yt-dlp', args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
@@ -139,7 +167,9 @@ async function createAudioResourceFromUrl(url, volume, options = {}) {
       '--quiet',
       url
     ];
-    const child = spawn('yt-dlp', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn('yt-dlp', buildYtDlpArgs(args), {
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
     let settled = false;
     let stderr = '';
     let receivedData = false;
