@@ -26,6 +26,8 @@ brew install yt-dlp ffmpeg deno
    - `IDLE_DISCONNECT_SECONDS=5` (optional)
    - `STREAM_START_TIMEOUT_MS=15000` (optional)
    - `PLAYLIST_LIMIT=50` (optional, 0 = unlimited)
+   - `DEBUG_LOG_CHANNEL_ID=1234567890` (optional)
+   - `DEBUG_LOG_THROTTLE_SECONDS=60` (optional)
    - `YTDLP_COOKIES_PATH=/path/to/youtube-cookies.txt` (optional)
    - `YTDLP_COOKIES_FROM_BROWSER=chrome` (optional)
    - `YTDLP_PROXY=http://user:pass@host:port` (optional)
@@ -86,6 +88,8 @@ Notes
   bot prefers `YTDLP_COOKIES_PATH`.
 - If you see "Signature solving failed", set `YTDLP_REMOTE_COMPONENTS=ejs:github`
   so yt-dlp can download the solver scripts it needs.
+- If you set `DEBUG_LOG_CHANNEL_ID`, use a mod-only channel to avoid leaking
+  error details.
 
 ## Docker Notes
 Docker files are included and install `yt-dlp` + `ffmpeg`.

@@ -43,6 +43,8 @@ services:
    - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
    - `STREAM_START_TIMEOUT_MS` (optional, ms)
    - `PLAYLIST_LIMIT` (optional, default 50, 0 = unlimited)
+   - `DEBUG_LOG_CHANNEL_ID` (optional, post error summaries)
+   - `DEBUG_LOG_THROTTLE_SECONDS` (optional, default 60)
 6) Deploy the stack.
 
 ## Option B: Private GitHub Repo (Portainer Git Stack)
@@ -60,6 +62,8 @@ services:
    - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
    - `STREAM_START_TIMEOUT_MS` (optional, ms)
    - `PLAYLIST_LIMIT` (optional, default 50, 0 = unlimited)
+   - `DEBUG_LOG_CHANNEL_ID` (optional, post error summaries)
+   - `DEBUG_LOG_THROTTLE_SECONDS` (optional, default 60)
 7) Deploy the stack.
 
 ## Option C: GHCR Image (recommended)
@@ -94,6 +98,8 @@ services:
    - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
    - `STREAM_START_TIMEOUT_MS` (optional, ms)
    - `PLAYLIST_LIMIT` (optional, default 50, 0 = unlimited)
+   - `DEBUG_LOG_CHANNEL_ID` (optional, post error summaries)
+   - `DEBUG_LOG_THROTTLE_SECONDS` (optional, default 60)
 6) Deploy the stack.
 
 ## Option D: Prebuild on Mac, Run on NAS
@@ -124,6 +130,7 @@ gunzip -c musicbot.tar.gz | docker load
   the cookie jar.
 - If you see YouTube signature errors, set `YTDLP_REMOTE_COMPONENTS=ejs:github`
   and allow outbound HTTPS for the container.
+- If you set `DEBUG_LOG_CHANNEL_ID`, use a mod-only channel for error summaries.
 - To update: rebuild the image and redeploy the stack.
 
 ## Updating the Stack

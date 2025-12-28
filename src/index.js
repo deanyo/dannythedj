@@ -5,10 +5,13 @@ const {
   Client,
   GatewayIntentBits,
   MessageFlags,
-  PermissionsBitField
+  PermissionsBitField,
+  EmbedBuilder,
+  Colors
 } = require('discord.js');
 const { GuildQueue } = require('./player');
 const { resolvePlaylistTracks, resolveTracks } = require('./yt');
+const { getUserFacingError } = require('./errors');
 const logger = require('./logger');
 const packageInfo = require('../package.json');
 
@@ -46,6 +49,15 @@ const STREAM_TIMEOUT_MS = getNumberEnv(
 );
 const PLAYLIST_LIMIT = getNumberEnv('PLAYLIST_LIMIT', 50);
 const PLAYLIST_PREFETCH_COUNT = 5;
+const DEBUG_LOG_CHANNEL_ID = process.env.DEBUG_LOG_CHANNEL_ID;
+const DEBUG_LOG_THROTTLE_SECONDS = getNumberEnv(
+  'DEBUG_LOG_THROTTLE_SECONDS',
+  60
+);
+
+const debugLogState = {
+  lastSentByGuild: new Map()
+};
 
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
@@ -70,7 +82,8 @@ function getQueue(guildId) {
     queue = new GuildQueue(guildId, {
       idleDisconnectMs: IDLE_DISCONNECT_MS,
       defaultVolume: DEFAULT_VOLUME,
-      streamTimeoutMs: STREAM_TIMEOUT_MS
+      streamTimeoutMs: STREAM_TIMEOUT_MS,
+      onError: (entry) => notifyDebugChannel(guildId, entry, client)
     });
     queues.set(guildId, queue);
   }
@@ -133,6 +146,22 @@ function formatTrackLine(track, index, options = {}) {
     : '';
   const prefix = typeof index === 'number' ? `${index + 1}. ` : '';
   return `${prefix}${track.title}${durationLabel}${requester}`;
+}
+
+function truncateText(value, maxLength) {
+  if (!value || value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength - 3)}...`;
+}
+
+function formatQueueItem(track, number) {
+  const duration = formatDuration(track.duration);
+  const durationLabel = duration ? ` [${duration}]` : '';
+  const requester = track.requestedBy ? ` - ${track.requestedBy}` : '';
+  const title = truncateText(track.title || track.url || 'Unknown', 80);
+  const prefix = typeof number === 'number' ? `${number}. ` : '';
+  return `${prefix}${title}${durationLabel}${requester}`;
 }
 
 function isPlaylistInput(input) {
@@ -227,21 +256,199 @@ function buildQueueMessage(queue) {
   return lines.join('\n');
 }
 
+function buildQueuedEmbed(track, requester, options = {}) {
+  const embed = new EmbedBuilder()
+    .setColor(Colors.Blurple)
+    .setTitle(options.title || 'Queued');
+  const safeTitle = truncateText(track.title || track.url || 'Unknown', 200);
+  const label = track.url ? `[${safeTitle}](${track.url})` : safeTitle;
+  embed.setDescription(label);
+  const fields = [];
+  if (Number.isFinite(track.duration)) {
+    fields.push({ name: 'Duration', value: formatDuration(track.duration), inline: true });
+  }
+  if (requester) {
+    fields.push({ name: 'Requested by', value: requester, inline: true });
+  }
+  if (fields.length) {
+    embed.addFields(fields);
+  }
+  if (options.footer) {
+    embed.setFooter({ text: options.footer });
+  }
+  return { embeds: [embed] };
+}
+
+function buildPlaylistStatusEmbed(message, options = {}) {
+  const embed = new EmbedBuilder()
+    .setColor(Colors.Blurple)
+    .setTitle(options.title || 'Playlist')
+    .setDescription(message);
+  if (options.footer) {
+    embed.setFooter({ text: options.footer });
+  }
+  return { embeds: [embed] };
+}
+
+function buildQueueEmbed(queue, page) {
+  const embed = new EmbedBuilder()
+    .setColor(Colors.Blurple)
+    .setTitle('Queue');
+
+  if (queue.current) {
+    embed.addFields({
+      name: 'Now playing',
+      value: formatQueueItem(queue.current)
+    });
+  } else {
+    embed.addFields({ name: 'Now playing', value: 'Nothing playing.' });
+  }
+
+  const upcomingCount = queue.queue.length;
+  if (upcomingCount > 0) {
+    const pageSize = 10;
+    const totalPages = Math.max(1, Math.ceil(upcomingCount / pageSize));
+    const currentPage = clamp(Number(page) || 1, 1, totalPages);
+    const start = (currentPage - 1) * pageSize;
+    const upcoming = queue.queue.slice(start, start + pageSize);
+    const lines = upcoming.map((track, index) =>
+      formatQueueItem(track, start + index + 1)
+    );
+    embed.addFields({
+      name: `Up next (page ${currentPage}/${totalPages})`,
+      value: lines.join('\n')
+    });
+  } else {
+    embed.addFields({ name: 'Up next', value: 'Queue is empty.' });
+  }
+
+  const allTracks = [];
+  if (queue.current) {
+    allTracks.push(queue.current);
+  }
+  if (queue.queue.length > 0) {
+    allTracks.push(...queue.queue);
+  }
+  const requesterSummary = buildRequesterSummary(allTracks);
+  const durationSummary = buildDurationSummary(allTracks);
+  const summaryParts = [];
+  if (requesterSummary) {
+    summaryParts.push(requesterSummary);
+  }
+  if (durationSummary) {
+    summaryParts.push(durationSummary);
+  }
+  if (summaryParts.length > 0) {
+    embed.addFields({ name: 'Summary', value: summaryParts.join('\n') });
+  }
+
+  embed.setFooter({
+    text: `Up next: ${upcomingCount} track${upcomingCount === 1 ? '' : 's'}`
+  });
+
+  return { embeds: [embed] };
+}
+
+function buildNowPlayingEmbed(track) {
+  const embed = new EmbedBuilder()
+    .setColor(Colors.Green)
+    .setTitle('Now playing');
+  const safeTitle = truncateText(track.title || track.url || 'Unknown', 200);
+  const label = track.url ? `[${safeTitle}](${track.url})` : safeTitle;
+  embed.setDescription(label);
+  const fields = [];
+  if (Number.isFinite(track.duration)) {
+    fields.push({ name: 'Duration', value: formatDuration(track.duration), inline: true });
+  }
+  if (track.requestedBy) {
+    fields.push({ name: 'Requested by', value: track.requestedBy, inline: true });
+  }
+  if (fields.length) {
+    embed.addFields(fields);
+  }
+  return { embeds: [embed] };
+}
+
+function buildErrorEmbed(title, description) {
+  const embed = new EmbedBuilder()
+    .setColor(Colors.Red)
+    .setTitle(title)
+    .setDescription(description);
+  return { embeds: [embed] };
+}
+
+function normalizeReplyPayload(payload) {
+  if (typeof payload === 'string') {
+    return { content: payload };
+  }
+  return payload;
+}
+
 function createMessageResponder(message) {
-  return (content) =>
-    message.reply({
-      content,
+  return (payload) => {
+    const messageOptions = normalizeReplyPayload(payload);
+    return message.reply({
+      ...messageOptions,
       allowedMentions: { repliedUser: false }
     });
+  };
 }
 
 function createInteractionResponder(interaction) {
-  return (content) => {
+  return (payload) => {
+    const messageOptions = normalizeReplyPayload(payload);
     if (interaction.deferred || interaction.replied) {
-      return interaction.editReply({ content });
+      return interaction.editReply(messageOptions);
     }
-    return interaction.reply({ content });
+    return interaction.reply(messageOptions);
   };
+}
+
+function buildDebugErrorEmbed(entry, guildId) {
+  const embed = new EmbedBuilder()
+    .setColor(Colors.Red)
+    .setTitle('Musicbot error')
+    .setDescription(entry.summary || 'Unknown error');
+  const fields = [
+    { name: 'Context', value: entry.context || 'unknown', inline: true },
+    { name: 'Guild', value: guildId || 'unknown', inline: true }
+  ];
+  if (entry.track?.title) {
+    const trackLabel = entry.track.url
+      ? `[${entry.track.title}](${entry.track.url})`
+      : entry.track.title;
+    fields.push({ name: 'Track', value: trackLabel });
+  }
+  embed.addFields(fields);
+  embed.setTimestamp(entry.timestamp ? new Date(entry.timestamp) : new Date());
+  return embed;
+}
+
+function notifyDebugChannel(guildId, entry, client) {
+  if (!DEBUG_LOG_CHANNEL_ID || !entry || !client) {
+    return;
+  }
+  const now = Date.now();
+  const lastSent = debugLogState.lastSentByGuild.get(guildId) || 0;
+  const throttleMs = Math.max(0, DEBUG_LOG_THROTTLE_SECONDS) * 1000;
+  if (throttleMs > 0 && now - lastSent < throttleMs) {
+    return;
+  }
+  debugLogState.lastSentByGuild.set(guildId, now);
+  const payload = { embeds: [buildDebugErrorEmbed(entry, guildId)] };
+  const cached = client.channels.cache.get(DEBUG_LOG_CHANNEL_ID);
+  if (cached && cached.isTextBased()) {
+    cached.send(payload).catch(() => null);
+    return;
+  }
+  client.channels.fetch(DEBUG_LOG_CHANNEL_ID)
+    .then((fetched) => {
+      if (!fetched || !fetched.isTextBased()) {
+        return;
+      }
+      fetched.send(payload).catch(() => null);
+    })
+    .catch(() => null);
 }
 
 async function handlePlay({ guild, member, channel, reply, input }) {
@@ -282,25 +489,42 @@ async function handlePlay({ guild, member, channel, reply, input }) {
       });
     } catch (error) {
       logger.error(`[queue:${guild.id}] failed to resolve`, error);
-      return reply('Could not resolve that YouTube input.');
+      queue.recordError('resolve', error);
+      const reason = getUserFacingError(error);
+      return reply(
+        buildErrorEmbed(
+          'Could not resolve playlist',
+          reason || 'Try a different playlist or check your cookies.'
+        )
+      );
     }
 
     if (!tracks.length) {
-      return reply('No tracks found.');
+      return reply(buildErrorEmbed('No tracks found', 'Try a different playlist.'));
     }
 
     const added = queue.enqueue(tracks, member.user);
+    const limitLabel =
+      playlistLimit > 0 ? `Limit: ${playlistLimit} tracks` : null;
     const message =
       added === 1
-        ? `Queued: **${tracks[0].title}**`
+        ? `Queued **${tracks[0].title}**`
         : `Queued ${added} tracks.`;
 
     if (playlistLimit === 1) {
-      return reply(`${message} (playlist limit reached)`);
+      return reply(
+        buildPlaylistStatusEmbed(`${message} (playlist limit reached).`, {
+          title: 'Playlist queued',
+          footer: limitLabel
+        })
+      );
     }
 
     const replyPromise = reply(
-      `${message} Loading the rest of the playlist...`
+      buildPlaylistStatusEmbed(`${message} Loading the rest of the playlist...`, {
+        title: 'Playlist queued',
+        footer: limitLabel
+      })
     );
 
     if (playlistLimit > 0 && playlistLimit <= prefetch) {
@@ -320,7 +544,12 @@ async function handlePlay({ guild, member, channel, reply, input }) {
         const addedRemaining = queue.enqueue(remaining, member.user);
         if (queue.textChannel) {
           queue.textChannel
-            .send(`Queued ${addedRemaining} more tracks from the playlist.`)
+            .send(
+              buildPlaylistStatusEmbed(
+                `Queued ${addedRemaining} more tracks from the playlist.`,
+                { title: 'Playlist update' }
+              )
+            )
             .catch(() => null);
         }
       })
@@ -329,9 +558,15 @@ async function handlePlay({ guild, member, channel, reply, input }) {
           `[queue:${guild.id}] failed to resolve playlist remainder`,
           error
         );
+        queue.recordError('resolve', error);
         if (queue.textChannel) {
           queue.textChannel
-            .send('Failed to load the rest of the playlist. Some tracks may be missing.')
+            .send(
+              buildErrorEmbed(
+                'Playlist update failed',
+                'Failed to load the rest of the playlist. Some tracks may be missing.'
+              )
+            )
             .catch(() => null);
         }
       });
@@ -343,18 +578,27 @@ async function handlePlay({ guild, member, channel, reply, input }) {
     tracks = await resolveTracks(input);
   } catch (error) {
     logger.error(`[queue:${guild.id}] failed to resolve`, error);
-    return reply('Could not resolve that YouTube input.');
+    queue.recordError('resolve', error);
+    const reason = getUserFacingError(error);
+    return reply(
+      buildErrorEmbed(
+        'Could not resolve',
+        reason || 'Try a different URL or search query.'
+      )
+    );
   }
 
   if (!tracks.length) {
-    return reply('No tracks found.');
+    return reply(buildErrorEmbed('No tracks found', 'Try a different search.'));
   }
 
   const added = queue.enqueue(tracks, member.user);
   if (added === 1) {
-    return reply(`Queued: **${tracks[0].title}**`);
+    return reply(buildQueuedEmbed(tracks[0], member.user.tag));
   }
-  return reply(`Queued ${added} tracks.`);
+  return reply(
+    buildPlaylistStatusEmbed(`Queued ${added} tracks.`, { title: 'Queued' })
+  );
 }
 
 function handlePump(payload) {
@@ -420,6 +664,38 @@ async function handleDebug(interaction) {
   if (next !== current) {
     logger.setLevel(next);
     logger.info(`Log level set to ${next} by ${interaction.user.tag}`);
+  }
+
+  if (mode === 'status') {
+    const queue = queues.get(interaction.guild.id);
+    const lastError = queue?.lastError;
+    const embed = new EmbedBuilder()
+      .setColor(Colors.Blurple)
+      .setTitle('Debug status')
+      .addFields({
+        name: 'Log level',
+        value: logger.getLevel(),
+        inline: true
+      });
+    if (lastError) {
+      const when = Math.floor(lastError.timestamp / 1000);
+      let details = lastError.summary || 'Unknown error';
+      details += lastError.context ? `\nContext: ${lastError.context}` : '';
+      details += `\nWhen: <t:${when}:R>`;
+      if (lastError.track?.title) {
+        const trackLabel = lastError.track.url
+          ? `[${lastError.track.title}](${lastError.track.url})`
+          : lastError.track.title;
+        details += `\nTrack: ${trackLabel}`;
+      }
+      embed.addFields({ name: 'Last error', value: details });
+    } else {
+      embed.addFields({ name: 'Last error', value: 'None recorded.' });
+    }
+    return interaction.reply({
+      embeds: [embed],
+      flags: MessageFlags.Ephemeral
+    });
   }
 
   return interaction.reply({
@@ -501,12 +777,15 @@ function handleStop({ guild, reply }) {
   return reply('Stopped and cleared the queue.');
 }
 
-function handleQueue({ guild, reply }) {
+function handleQueue({ guild, reply, page }) {
   const queue = queues.get(guild.id);
   if (!queue) {
     return reply('Queue is empty.');
   }
-  return reply(buildQueueMessage(queue));
+  if (!queue.current && queue.queue.length === 0) {
+    return reply('Queue is empty.');
+  }
+  return reply(buildQueueEmbed(queue, page));
 }
 
 function handleNow({ guild, reply }) {
@@ -514,7 +793,7 @@ function handleNow({ guild, reply }) {
   if (!queue || !queue.current) {
     return reply('Nothing is playing.');
   }
-  return reply(`Now playing: **${formatTrackLine(queue.current)}**`);
+  return reply(buildNowPlayingEmbed(queue.current));
 }
 
 function parseMentionCommand(content) {
@@ -581,7 +860,11 @@ client.on('interactionCreate', async (interaction) => {
         await handleStop({ guild: interaction.guild, reply });
         break;
       case 'queue':
-        await handleQueue({ guild: interaction.guild, reply });
+        await handleQueue({
+          guild: interaction.guild,
+          reply,
+          page: interaction.options.getInteger('page')
+        });
         break;
       case 'now':
         await handleNow({ guild: interaction.guild, reply });
@@ -653,7 +936,14 @@ client.on('messageCreate', async (message) => {
         await handleStop({ guild: message.guild, reply });
         break;
       case 'queue':
-        await handleQueue({ guild: message.guild, reply });
+        {
+          const rawPage = args ? Number(args) : NaN;
+          await handleQueue({
+            guild: message.guild,
+            reply,
+            page: Number.isFinite(rawPage) ? rawPage : null
+          });
+        }
         break;
       case 'now':
         await handleNow({ guild: message.guild, reply });

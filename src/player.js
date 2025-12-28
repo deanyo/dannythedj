@@ -6,8 +6,53 @@ const {
   entersState,
   joinVoiceChannel
 } = require('@discordjs/voice');
+const { EmbedBuilder, Colors } = require('discord.js');
 const { createAudioResourceFromUrl } = require('./yt');
+const { getUserFacingError, summarizeError } = require('./errors');
 const logger = require('./logger');
+
+function formatDuration(seconds) {
+  if (!Number.isFinite(seconds)) {
+    return '';
+  }
+  const total = Math.max(0, Math.floor(seconds));
+  const hrs = Math.floor(total / 3600);
+  const mins = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  if (hrs > 0) {
+    return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+function buildNowPlayingEmbed(track) {
+  const embed = new EmbedBuilder()
+    .setColor(Colors.Green)
+    .setTitle('Now playing');
+  const title = track.title || track.url || 'Unknown';
+  const safeTitle = title.length > 200 ? `${title.slice(0, 197)}...` : title;
+  const label = track.url ? `[${safeTitle}](${track.url})` : safeTitle;
+  embed.setDescription(label);
+  const fields = [];
+  if (Number.isFinite(track.duration)) {
+    fields.push({
+      name: 'Duration',
+      value: formatDuration(track.duration),
+      inline: true
+    });
+  }
+  if (track.requestedBy) {
+    fields.push({
+      name: 'Requested by',
+      value: track.requestedBy,
+      inline: true
+    });
+  }
+  if (fields.length) {
+    embed.addFields(fields);
+  }
+  return embed;
+}
 
 class GuildQueue {
   constructor(guildId, options = {}) {
@@ -23,6 +68,8 @@ class GuildQueue {
     this.idleDisconnectMs = Number.isFinite(options.idleDisconnectMs)
       ? options.idleDisconnectMs
       : 0;
+    this.onError = typeof options.onError === 'function' ? options.onError : null;
+    this.lastError = null;
     this.volume = Number.isFinite(options.defaultVolume)
       ? options.defaultVolume
       : 1;
@@ -62,6 +109,7 @@ class GuildQueue {
 
     this.player.on('error', (error) => {
       logger.error(`[queue:${this.guildId}] audio player error`, error);
+      this.recordError('player', error, this.current);
       this._cleanupProcess();
       this.current = null;
       this._playNext().catch((nextError) => {
@@ -104,6 +152,24 @@ class GuildQueue {
       logger.error(`[queue:${this.guildId}] enqueue failed`, error);
     });
     return enriched.length;
+  }
+
+  recordError(context, error, track) {
+    const summary = summarizeError(error);
+    this.lastError = {
+      timestamp: Date.now(),
+      context,
+      summary,
+      track: track
+        ? {
+            title: track.title,
+            url: track.url
+          }
+        : null
+    };
+    if (this.onError) {
+      this.onError(this.lastError);
+    }
   }
 
   skip() {
@@ -161,19 +227,22 @@ class GuildQueue {
       this.current = next;
       this.player.play(resource);
       if (this.textChannel) {
-        this.textChannel
-          .send(
-            `Now playing: **${next.title}** (requested by ${next.requestedBy})`
-          )
+        this.textChannel.send({ embeds: [buildNowPlayingEmbed(next)] })
           .catch(() => null);
       }
     } catch (error) {
       logger.error(`[queue:${this.guildId}] failed to play`, error);
+      this.recordError('playback', error, next);
       this.current = null;
       this._cleanupProcess();
       if (this.textChannel) {
+        const reason = getUserFacingError(error);
         this.textChannel
-          .send(`Failed to play **${next.title}**. Skipping.`)
+          .send(
+            reason
+              ? `Failed to play **${next.title}**. ${reason}`
+              : `Failed to play **${next.title}**. Skipping.`
+          )
           .catch(() => null);
       }
       shouldContinue = true;

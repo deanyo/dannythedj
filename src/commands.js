@@ -24,7 +24,14 @@ const commandBuilders = [
     .setDescription('Stop playback and clear the queue'),
   new SlashCommandBuilder()
     .setName('queue')
-    .setDescription('Show the current queue'),
+    .setDescription('Show the current queue')
+    .addIntegerOption((option) =>
+      option
+        .setName('page')
+        .setDescription('Queue page (10 tracks per page)')
+        .setMinValue(1)
+        .setRequired(false)
+    ),
   new SlashCommandBuilder()
     .setName('now')
     .setDescription('Show what is playing right now'),
