@@ -85,6 +85,7 @@ If the voice channel becomes empty, the bot will leave automatically.
 - `STREAM_START_TIMEOUT_MS`: max time to wait for audio to start (default 15000)
 - `HEALTHCHECK_PATH`: file updated by the bot for container healthchecks
 - `HEALTHCHECK_MAX_AGE_SECONDS`: max age before healthcheck fails (default 120)
+- `PLAYLIST_LIMIT`: max tracks to queue from a playlist (default 50, 0 = unlimited)
 - `YTDLP_COOKIES_PATH`: path to exported YouTube cookies for age/region/private videos
 - `YTDLP_COOKIES_FROM_BROWSER`: browser name/profile for yt-dlp cookie import
 - `YTDLP_PROXY`: proxy URL passed to yt-dlp for region-locked videos

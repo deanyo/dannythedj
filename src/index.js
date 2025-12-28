@@ -8,7 +8,7 @@ const {
   PermissionsBitField
 } = require('discord.js');
 const { GuildQueue } = require('./player');
-const { resolveTracks } = require('./yt');
+const { resolvePlaylistTracks, resolveTracks } = require('./yt');
 const logger = require('./logger');
 const packageInfo = require('../package.json');
 
@@ -44,6 +44,8 @@ const STREAM_TIMEOUT_MS = getNumberEnv(
   'STREAM_START_TIMEOUT_MS',
   15_000
 );
+const PLAYLIST_LIMIT = getNumberEnv('PLAYLIST_LIMIT', 50);
+const PLAYLIST_PREFETCH_COUNT = 5;
 
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
@@ -131,6 +133,20 @@ function formatTrackLine(track, index, options = {}) {
     : '';
   const prefix = typeof index === 'number' ? `${index + 1}. ` : '';
   return `${prefix}${track.title}${durationLabel}${requester}`;
+}
+
+function isPlaylistInput(input) {
+  return /[?&]list=/.test(input || '');
+}
+
+function getPlaylistLimit() {
+  if (!Number.isFinite(PLAYLIST_LIMIT)) {
+    return 50;
+  }
+  if (PLAYLIST_LIMIT <= 0) {
+    return 0;
+  }
+  return Math.floor(PLAYLIST_LIMIT);
 }
 
 function buildRequesterSummary(tracks) {
@@ -248,6 +264,78 @@ async function handlePlay({ guild, member, channel, reply, input }) {
   } catch (error) {
     logger.error(`[queue:${guild.id}] failed to connect`, error);
     return reply('Failed to join your voice channel.');
+  }
+
+  const playlistLimit = getPlaylistLimit();
+  if (isPlaylistInput(input)) {
+    const prefetch = Math.max(
+      1,
+      playlistLimit > 0
+        ? Math.min(PLAYLIST_PREFETCH_COUNT, playlistLimit)
+        : PLAYLIST_PREFETCH_COUNT
+    );
+    let tracks = [];
+    try {
+      tracks = await resolvePlaylistTracks(input, {
+        playlistStart: 1,
+        playlistEnd: prefetch
+      });
+    } catch (error) {
+      logger.error(`[queue:${guild.id}] failed to resolve`, error);
+      return reply('Could not resolve that YouTube input.');
+    }
+
+    if (!tracks.length) {
+      return reply('No tracks found.');
+    }
+
+    const added = queue.enqueue(tracks, member.user);
+    const message =
+      added === 1
+        ? `Queued: **${tracks[0].title}**`
+        : `Queued ${added} tracks.`;
+
+    if (playlistLimit === 1) {
+      return reply(`${message} (playlist limit reached)`);
+    }
+
+    const replyPromise = reply(
+      `${message} Loading the rest of the playlist...`
+    );
+
+    if (playlistLimit > 0 && playlistLimit <= prefetch) {
+      return replyPromise;
+    }
+
+    const playlistStart = prefetch + 1;
+    const playlistEnd = playlistLimit > 0 ? playlistLimit : null;
+    resolvePlaylistTracks(input, {
+      playlistStart,
+      playlistEnd
+    })
+      .then((remaining) => {
+        if (!remaining.length) {
+          return;
+        }
+        const addedRemaining = queue.enqueue(remaining, member.user);
+        if (queue.textChannel) {
+          queue.textChannel
+            .send(`Queued ${addedRemaining} more tracks from the playlist.`)
+            .catch(() => null);
+        }
+      })
+      .catch((error) => {
+        logger.error(
+          `[queue:${guild.id}] failed to resolve playlist remainder`,
+          error
+        );
+        if (queue.textChannel) {
+          queue.textChannel
+            .send('Failed to load the rest of the playlist. Some tracks may be missing.')
+            .catch(() => null);
+        }
+      });
+    return replyPromise;
   }
 
   let tracks;

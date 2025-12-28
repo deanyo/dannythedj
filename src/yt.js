@@ -93,9 +93,15 @@ function toTrack(entry) {
 function runYtDlpJson(input, options = {}) {
   return new Promise((resolve, reject) => {
     const ignoreErrors = options.ignoreErrors === true;
+    const flatPlaylist = options.flatPlaylist === true;
+    const playlistStart = normalizePlaylistIndex(options.playlistStart);
+    const playlistEnd = normalizePlaylistIndex(options.playlistEnd);
     const args = buildYtDlpArgs([
       '--dump-single-json',
       '--no-warnings',
+      ...(flatPlaylist ? ['--flat-playlist'] : []),
+      ...(playlistStart ? ['--playlist-start', String(playlistStart)] : []),
+      ...(playlistEnd ? ['--playlist-end', String(playlistEnd)] : []),
       ...(ignoreErrors ? ['--ignore-errors'] : []),
       input
     ]);
@@ -153,6 +159,14 @@ function runYtDlpJson(input, options = {}) {
   });
 }
 
+function normalizePlaylistIndex(value) {
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+  const index = Math.floor(value);
+  return index > 0 ? index : null;
+}
+
 async function resolveTracks(input) {
   const query = isLikelyUrl(input) ? input : `ytsearch1:${input}`;
   const isPlaylistQuery = isLikelyUrl(input) && hasPlaylistParam(input);
@@ -163,13 +177,7 @@ async function resolveTracks(input) {
   }
   const playlistUrl = info?.webpage_url || info?.url;
   if (playlistUrl && hasPlaylistParam(playlistUrl)) {
-    logger.info(
-      '[yt-dlp] resolving playlist with --ignore-errors to skip unavailable entries.'
-    );
-    const playlistInfo = await runYtDlpJson(playlistUrl, {
-      ignoreErrors: true
-    });
-    return extractTracks(playlistInfo);
+    return resolvePlaylistTracks(playlistUrl);
   }
   return [];
 }
@@ -313,8 +321,22 @@ async function createAudioResourceFromUrl(url, volume, options = {}) {
 
 module.exports = {
   createAudioResourceFromUrl,
-  resolveTracks
+  resolveTracks,
+  resolvePlaylistTracks
 };
+
+async function resolvePlaylistTracks(url, options = {}) {
+  logger.info(
+    '[yt-dlp] resolving playlist with --flat-playlist and --ignore-errors.'
+  );
+  const playlistInfo = await runYtDlpJson(url, {
+    ignoreErrors: true,
+    flatPlaylist: options.flatPlaylist !== false,
+    playlistStart: options.playlistStart,
+    playlistEnd: options.playlistEnd
+  });
+  return extractTracks(playlistInfo);
+}
 
 function flattenEntries(entries) {
   return entries.flatMap((entry) => {

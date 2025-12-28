@@ -25,6 +25,7 @@ brew install yt-dlp ffmpeg deno
    - `DEFAULT_VOLUME=100` (optional)
    - `IDLE_DISCONNECT_SECONDS=5` (optional)
    - `STREAM_START_TIMEOUT_MS=15000` (optional)
+   - `PLAYLIST_LIMIT=50` (optional, 0 = unlimited)
    - `YTDLP_COOKIES_PATH=/path/to/youtube-cookies.txt` (optional)
    - `YTDLP_COOKIES_FROM_BROWSER=chrome` (optional)
    - `YTDLP_PROXY=http://user:pass@host:port` (optional)

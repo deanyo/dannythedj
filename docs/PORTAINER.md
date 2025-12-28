@@ -42,6 +42,7 @@ services:
    - `DEFAULT_VOLUME` (optional, 0-200)
    - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
    - `STREAM_START_TIMEOUT_MS` (optional, ms)
+   - `PLAYLIST_LIMIT` (optional, default 50, 0 = unlimited)
 6) Deploy the stack.
 
 ## Option B: Private GitHub Repo (Portainer Git Stack)
@@ -58,6 +59,7 @@ services:
    - `DEFAULT_VOLUME` (optional, 0-200)
    - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
    - `STREAM_START_TIMEOUT_MS` (optional, ms)
+   - `PLAYLIST_LIMIT` (optional, default 50, 0 = unlimited)
 7) Deploy the stack.
 
 ## Option C: GHCR Image (recommended)
@@ -91,6 +93,7 @@ services:
    - `DEFAULT_VOLUME` (optional, 0-200)
    - `IDLE_DISCONNECT_SECONDS` (optional, seconds)
    - `STREAM_START_TIMEOUT_MS` (optional, ms)
+   - `PLAYLIST_LIMIT` (optional, default 50, 0 = unlimited)
 6) Deploy the stack.
 
 ## Option D: Prebuild on Mac, Run on NAS
