@@ -117,6 +117,8 @@ gunzip -c musicbot.tar.gz | docker load
 ## Runtime Notes
 - No volume mounts are required.
 - If you use playlist-heavy queues, ensure enough CPU headroom for `yt-dlp`.
+- If you mount a cookies file for yt-dlp, mount it read-write so it can update
+  the cookie jar.
 - To update: rebuild the image and redeploy the stack.
 
 ## Updating the Stack

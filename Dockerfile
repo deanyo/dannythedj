@@ -5,7 +5,15 @@ ENV HEALTHCHECK_PATH=/tmp/musicbot-healthcheck
 ENV HEALTHCHECK_MAX_AGE_SECONDS=120
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ffmpeg python3 python3-pip ca-certificates \
+  && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    python3 \
+    python3-pip \
+    ca-certificates \
+    curl \
+    unzip \
+  && curl -fsSL https://deno.land/x/install/install.sh | DENO_INSTALL=/usr/local/deno sh \
+  && ln -s /usr/local/deno/bin/deno /usr/local/bin/deno \
   && python3 -m pip install --no-cache-dir --break-system-packages yt-dlp \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*

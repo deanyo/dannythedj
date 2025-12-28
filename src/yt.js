@@ -37,6 +37,10 @@ function buildYtDlpArgs(args) {
   return [...YTDLP_EXTRA_ARGS, ...args];
 }
 
+function hasPlaylistParam(url) {
+  return /[?&]list=/.test(url);
+}
+
 function isLikelyUrl(input) {
   if (!input) {
     return false;
@@ -82,11 +86,13 @@ function toTrack(entry) {
   };
 }
 
-function runYtDlpJson(input) {
+function runYtDlpJson(input, options = {}) {
   return new Promise((resolve, reject) => {
+    const ignoreErrors = options.ignoreErrors === true;
     const args = buildYtDlpArgs([
       '--dump-single-json',
       '--no-warnings',
+      ...(ignoreErrors ? ['--ignore-errors'] : []),
       input
     ]);
     const child = spawn('yt-dlp', args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -125,14 +131,20 @@ function runYtDlpJson(input) {
 
 async function resolveTracks(input) {
   const query = isLikelyUrl(input) ? input : `ytsearch1:${input}`;
-  const info = await runYtDlpJson(query);
+  const isPlaylistQuery = isLikelyUrl(input) && hasPlaylistParam(input);
+  const info = await runYtDlpJson(query, { ignoreErrors: isPlaylistQuery });
   const tracks = extractTracks(info);
   if (tracks.length > 0) {
     return tracks;
   }
   const playlistUrl = info?.webpage_url || info?.url;
-  if (playlistUrl && /[?&]list=/.test(playlistUrl)) {
-    const playlistInfo = await runYtDlpJson(playlistUrl);
+  if (playlistUrl && hasPlaylistParam(playlistUrl)) {
+    logger.info(
+      '[yt-dlp] resolving playlist with --ignore-errors to skip unavailable entries.'
+    );
+    const playlistInfo = await runYtDlpJson(playlistUrl, {
+      ignoreErrors: true
+    });
     return extractTracks(playlistInfo);
   }
   return [];

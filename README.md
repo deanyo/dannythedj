@@ -16,6 +16,7 @@ single videos, Shorts, and playlist URLs. Commands work as slash commands
 - Node.js 22.12+
 - `yt-dlp` in PATH
 - `ffmpeg` in PATH
+- `deno` in PATH (required for reliable YouTube extraction)
 - Discord bot token + application client ID
 - Message Content intent enabled in the Discord dev portal (for mention commands)
 
@@ -48,7 +49,7 @@ npm start
 1) Install runtime deps:
 
 ```sh
-brew install yt-dlp ffmpeg
+brew install yt-dlp ffmpeg deno
 ```
 
 2) Add the bot to your server (OAuth2 URL with `bot` and `applications.commands` scopes).

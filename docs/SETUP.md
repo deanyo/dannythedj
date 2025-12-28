@@ -3,7 +3,13 @@
 ## Prerequisites
 - Node.js 22.12+
 - `yt-dlp` and `ffmpeg` available in PATH
+- `deno` available in PATH (required for reliable YouTube extraction)
 - A Discord application with a bot token
+
+Example (macOS):
+```sh
+brew install yt-dlp ffmpeg deno
+```
 
 ## Discord Portal Checklist
 1) Copy the bot token (Bot tab) and Application ID.
@@ -71,6 +77,7 @@ Option B: Import cookies from a browser profile
 
 Notes
 - Keep cookies private; they grant access to your account.
+- yt-dlp writes back to the cookie jar; the file must be writable by the bot.
 - For Docker, mount the cookies file and point `YTDLP_COOKIES_PATH` to the
   mounted path in the container.
 - If you set both `YTDLP_COOKIES_PATH` and `YTDLP_COOKIES_FROM_BROWSER`, the
