@@ -88,6 +88,7 @@ If the voice channel becomes empty, the bot will leave automatically.
 - `YTDLP_COOKIES_PATH`: path to exported YouTube cookies for age/region/private videos
 - `YTDLP_COOKIES_FROM_BROWSER`: browser name/profile for yt-dlp cookie import
 - `YTDLP_PROXY`: proxy URL passed to yt-dlp for region-locked videos
+- `YTDLP_REMOTE_COMPONENTS`: e.g. `ejs:github` for YouTube JS challenge solving
 
 ## Additional Docs
 

@@ -119,6 +119,8 @@ gunzip -c musicbot.tar.gz | docker load
 - If you use playlist-heavy queues, ensure enough CPU headroom for `yt-dlp`.
 - If you mount a cookies file for yt-dlp, mount it read-write so it can update
   the cookie jar.
+- If you see YouTube signature errors, set `YTDLP_REMOTE_COMPONENTS=ejs:github`
+  and allow outbound HTTPS for the container.
 - To update: rebuild the image and redeploy the stack.
 
 ## Updating the Stack

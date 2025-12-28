@@ -10,6 +10,7 @@ const URL_PATTERN = /^(https?:\/\/|www\.)/i;
 const YTDLP_COOKIES_PATH = process.env.YTDLP_COOKIES_PATH;
 const YTDLP_COOKIES_FROM_BROWSER = process.env.YTDLP_COOKIES_FROM_BROWSER;
 const YTDLP_PROXY = process.env.YTDLP_PROXY;
+const YTDLP_REMOTE_COMPONENTS = process.env.YTDLP_REMOTE_COMPONENTS;
 const YTDLP_EXTRA_ARGS = buildYtDlpExtraArgs();
 
 function buildYtDlpExtraArgs() {
@@ -26,6 +27,9 @@ function buildYtDlpExtraArgs() {
   }
   if (YTDLP_PROXY) {
     args.push('--proxy', YTDLP_PROXY);
+  }
+  if (YTDLP_REMOTE_COMPONENTS) {
+    args.push('--remote-components', YTDLP_REMOTE_COMPONENTS);
   }
   return args;
 }

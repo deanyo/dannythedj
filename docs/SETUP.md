@@ -28,6 +28,7 @@ brew install yt-dlp ffmpeg deno
    - `YTDLP_COOKIES_PATH=/path/to/youtube-cookies.txt` (optional)
    - `YTDLP_COOKIES_FROM_BROWSER=chrome` (optional)
    - `YTDLP_PROXY=http://user:pass@host:port` (optional)
+   - `YTDLP_REMOTE_COMPONENTS=ejs:github` (optional, recommended)
 2) Install dependencies:
 
 ```sh
@@ -82,6 +83,8 @@ Notes
   mounted path in the container.
 - If you set both `YTDLP_COOKIES_PATH` and `YTDLP_COOKIES_FROM_BROWSER`, the
   bot prefers `YTDLP_COOKIES_PATH`.
+- If you see "Signature solving failed", set `YTDLP_REMOTE_COMPONENTS=ejs:github`
+  so yt-dlp can download the solver scripts it needs.
 
 ## Docker Notes
 Docker files are included and install `yt-dlp` + `ffmpeg`.
