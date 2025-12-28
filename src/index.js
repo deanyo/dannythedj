@@ -10,7 +10,7 @@ const {
   Colors
 } = require('discord.js');
 const { GuildQueue } = require('./player');
-const { resolvePlaylistTracks, resolveTracks } = require('./yt');
+const { resolvePlaylistTracks, resolveTracks, searchTracks } = require('./yt');
 const { getUserFacingError } = require('./errors');
 const logger = require('./logger');
 const packageInfo = require('../package.json');
@@ -377,6 +377,26 @@ function buildErrorEmbed(title, description) {
   return { embeds: [embed] };
 }
 
+function buildSearchResultsEmbed(query, results) {
+  const embed = new EmbedBuilder()
+    .setColor(Colors.Blurple)
+    .setTitle('Search results');
+  const lines = results.map((track, index) => {
+    const duration = formatDuration(track.duration);
+    const durationLabel = duration ? ` [${duration}]` : '';
+    const title = truncateText(track.title || track.url || 'Unknown', 80);
+    const label = track.url ? `[${title}](${track.url})` : title;
+    return `${index + 1}. ${label}${durationLabel}`;
+  });
+  if (query) {
+    embed.setDescription(`Results for **${truncateText(query, 80)}**\n${lines.join('\n')}`);
+  } else {
+    embed.setDescription(lines.join('\n'));
+  }
+  embed.setFooter({ text: 'Use /play <url> to queue a result.' });
+  return { embeds: [embed] };
+}
+
 function normalizeReplyPayload(payload) {
   if (typeof payload === 'string') {
     return { content: payload };
@@ -599,6 +619,31 @@ async function handlePlay({ guild, member, channel, reply, input }) {
   return reply(
     buildPlaylistStatusEmbed(`Queued ${added} tracks.`, { title: 'Queued' })
   );
+}
+
+async function handleSearch({ reply, input }) {
+  if (!input) {
+    return reply('Provide search text.');
+  }
+  let results;
+  try {
+    results = await searchTracks(input);
+  } catch (error) {
+    logger.error('Search failed', error);
+    const reason = getUserFacingError(error);
+    return reply(
+      buildErrorEmbed(
+        'Search failed',
+        reason || 'Try again in a moment.'
+      )
+    );
+  }
+
+  if (!results.length) {
+    return reply(buildErrorEmbed('No results found', 'Try a different query.'));
+  }
+
+  return reply(buildSearchResultsEmbed(input, results));
 }
 
 function handlePump(payload) {
@@ -837,6 +882,12 @@ client.on('interactionCreate', async (interaction) => {
         });
         break;
       }
+      case 'search': {
+        await interaction.deferReply();
+        const input = interaction.options.getString('query');
+        await handleSearch({ reply, input });
+        break;
+      }
       case 'pump': {
         await interaction.deferReply();
         await handlePump({
@@ -921,6 +972,9 @@ client.on('messageCreate', async (message) => {
           reply,
           input: args
         });
+        break;
+      case 'search':
+        await handleSearch({ reply, input: args });
         break;
       case 'skip':
         await handleSkip({ guild: message.guild, reply });

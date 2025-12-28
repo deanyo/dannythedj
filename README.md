@@ -67,7 +67,7 @@ npm start
 
 ## Usage
 
-- Slash commands: `/play <url>`, `/skip`, `/pause`, `/resume`, `/stop`, `/queue [page]`, `/now`, `/pump`, `/lulaye`, `/about`, `/debug`, `/volume`
+- Slash commands: `/play <url>`, `/search <query>`, `/skip`, `/pause`, `/resume`, `/stop`, `/queue [page]`, `/now`, `/pump`, `/lulaye`, `/about`, `/debug`, `/volume`
 - Mention commands: `@Bot play <url>`, `@Bot skip`, `@Bot queue`, `@Bot volume 80`
 
 If you pass text instead of a URL, the bot uses `yt-dlp` search (`ytsearch1:`)
@@ -87,6 +87,8 @@ If the voice channel becomes empty, the bot will leave automatically.
 - `HEALTHCHECK_MAX_AGE_SECONDS`: max age before healthcheck fails (default 120)
 - `PLAYLIST_LIMIT`: max tracks to queue from a playlist (default 50, 0 = unlimited)
 - `RESOLVE_TIMEOUT_MS`: max time to resolve a URL/search (default 20000)
+- `SEARCH_TIMEOUT_MS`: max time to resolve searches (default 20000)
+- `SEARCH_RESULTS_LIMIT`: number of results to return for `/search` (default 5)
 - `DEBUG_LOG_CHANNEL_ID`: channel ID for error summaries (optional)
 - `DEBUG_LOG_THROTTLE_SECONDS`: minimum seconds between error summaries (default 60)
 - `YTDLP_COOKIES_PATH`: path to exported YouTube cookies for age/region/private videos

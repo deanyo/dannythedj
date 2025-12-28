@@ -44,6 +44,8 @@ services:
    - `STREAM_START_TIMEOUT_MS` (optional, ms)
    - `PLAYLIST_LIMIT` (optional, default 50, 0 = unlimited)
    - `RESOLVE_TIMEOUT_MS` (optional, default 20000)
+   - `SEARCH_TIMEOUT_MS` (optional, default 20000)
+   - `SEARCH_RESULTS_LIMIT` (optional, default 5)
    - `DEBUG_LOG_CHANNEL_ID` (optional, post error summaries)
    - `DEBUG_LOG_THROTTLE_SECONDS` (optional, default 60)
 6) Deploy the stack.
@@ -64,6 +66,8 @@ services:
    - `STREAM_START_TIMEOUT_MS` (optional, ms)
    - `PLAYLIST_LIMIT` (optional, default 50, 0 = unlimited)
    - `RESOLVE_TIMEOUT_MS` (optional, default 20000)
+   - `SEARCH_TIMEOUT_MS` (optional, default 20000)
+   - `SEARCH_RESULTS_LIMIT` (optional, default 5)
    - `DEBUG_LOG_CHANNEL_ID` (optional, post error summaries)
    - `DEBUG_LOG_THROTTLE_SECONDS` (optional, default 60)
 7) Deploy the stack.
@@ -101,6 +105,8 @@ services:
    - `STREAM_START_TIMEOUT_MS` (optional, ms)
    - `PLAYLIST_LIMIT` (optional, default 50, 0 = unlimited)
    - `RESOLVE_TIMEOUT_MS` (optional, default 20000)
+   - `SEARCH_TIMEOUT_MS` (optional, default 20000)
+   - `SEARCH_RESULTS_LIMIT` (optional, default 5)
    - `DEBUG_LOG_CHANNEL_ID` (optional, post error summaries)
    - `DEBUG_LOG_THROTTLE_SECONDS` (optional, default 60)
 6) Deploy the stack.

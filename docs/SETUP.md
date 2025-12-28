@@ -27,6 +27,8 @@ brew install yt-dlp ffmpeg deno
    - `STREAM_START_TIMEOUT_MS=15000` (optional)
    - `PLAYLIST_LIMIT=50` (optional, 0 = unlimited)
    - `RESOLVE_TIMEOUT_MS=20000` (optional)
+   - `SEARCH_TIMEOUT_MS=20000` (optional)
+   - `SEARCH_RESULTS_LIMIT=5` (optional)
    - `DEBUG_LOG_CHANNEL_ID=1234567890` (optional)
    - `DEBUG_LOG_THROTTLE_SECONDS=60` (optional)
    - `YTDLP_COOKIES_PATH=/path/to/youtube-cookies.txt` (optional)

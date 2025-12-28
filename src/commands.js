@@ -11,6 +11,15 @@ const commandBuilders = [
         .setRequired(true)
     ),
   new SlashCommandBuilder()
+    .setName('search')
+    .setDescription('Search YouTube and return top results')
+    .addStringOption((option) =>
+      option
+        .setName('query')
+        .setDescription('Search text')
+        .setRequired(true)
+    ),
+  new SlashCommandBuilder()
     .setName('skip')
     .setDescription('Skip the current track'),
   new SlashCommandBuilder()

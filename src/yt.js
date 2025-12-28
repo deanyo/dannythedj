@@ -118,6 +118,14 @@ const DEFAULT_RESOLVE_TIMEOUT_MS = getNumberEnv(
   'RESOLVE_TIMEOUT_MS',
   20_000
 );
+const DEFAULT_SEARCH_TIMEOUT_MS = getNumberEnv(
+  'SEARCH_TIMEOUT_MS',
+  20_000
+);
+const DEFAULT_SEARCH_RESULTS_LIMIT = getNumberEnv(
+  'SEARCH_RESULTS_LIMIT',
+  5
+);
 
 function runYtDlpJson(input, options = {}) {
   return new Promise((resolve, reject) => {
@@ -238,15 +246,34 @@ function normalizePlaylistIndex(value) {
   return index > 0 ? index : null;
 }
 
-async function resolveTracks(input) {
-  const query = isLikelyUrl(input) ? input : `ytsearch1:${input}`;
-  const isPlaylistQuery = isLikelyUrl(input) && hasPlaylistParam(input);
-  const info = await runYtDlpJson(query, { ignoreErrors: isPlaylistQuery });
-  if (!isLikelyUrl(input) && isPlaylistEntry(info)) {
-    const firstEntry = Array.isArray(info?.entries) ? info.entries[0] : null;
-    const track = toTrack(firstEntry);
-    return track ? [track] : [];
+function normalizeSearchLimit(value) {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_SEARCH_RESULTS_LIMIT;
   }
+  const rounded = Math.floor(value);
+  if (rounded <= 0) {
+    return DEFAULT_SEARCH_RESULTS_LIMIT;
+  }
+  return Math.min(rounded, 10);
+}
+
+async function searchTracks(query, options = {}) {
+  const limit = normalizeSearchLimit(options.limit);
+  const info = await runYtDlpJson(`ytsearch${limit}:${query}`, {
+    flatPlaylist: true,
+    timeoutMs: options.timeoutMs ?? DEFAULT_SEARCH_TIMEOUT_MS
+  });
+  const tracks = extractTracks(info);
+  return tracks.slice(0, limit);
+}
+
+async function resolveTracks(input) {
+  if (!isLikelyUrl(input)) {
+    return searchTracks(input, { limit: 1 });
+  }
+  const query = input;
+  const isPlaylistQuery = hasPlaylistParam(input);
+  const info = await runYtDlpJson(query, { ignoreErrors: isPlaylistQuery });
   const tracks = extractTracks(info);
   if (tracks.length > 0) {
     return tracks;
@@ -389,7 +416,8 @@ async function createAudioResourceFromUrl(url, volume, options = {}) {
 module.exports = {
   createAudioResourceFromUrl,
   resolveTracks,
-  resolvePlaylistTracks
+  resolvePlaylistTracks,
+  searchTracks
 };
 
 async function resolvePlaylistTracks(url, options = {}) {
