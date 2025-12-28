@@ -8,6 +8,11 @@ No ports are exposed because the bot only makes outbound connections to Discord.
 - A Discord bot token and Application ID.
 - `DISCORD_TOKEN`, `CLIENT_ID`, and optional `GUILD_ID` ready.
 
+## Optional Env File (recommended)
+To avoid pasting variables one-by-one in Portainer:
+1) Copy `portainer.env.example` to `portainer.env` and fill in values.
+2) In the stack editor, use the Environment variables section to load the file.
+
 ## Option A: Local Upload + Stack Build
 1) In Portainer, open **Stacks** -> **Add stack**.
 2) Name the stack (e.g., `musicbot`).

@@ -69,6 +69,7 @@ web_modules/
 .env
 .env.*
 !.env.example
+portainer.env
 
 # macOS
 .DS_Store
