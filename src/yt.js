@@ -7,6 +7,7 @@ const {
 const logger = require('./logger');
 
 const URL_PATTERN = /^(https?:\/\/|www\.)/i;
+const UNPLAYABLE_TITLE_PATTERN = /\[(deleted|private) video\]/i;
 const YTDLP_COOKIES_PATH = process.env.YTDLP_COOKIES_PATH;
 const YTDLP_COOKIES_FROM_BROWSER = process.env.YTDLP_COOKIES_FROM_BROWSER;
 const YTDLP_PROXY = process.env.YTDLP_PROXY;
@@ -56,6 +57,14 @@ function isPlaylistEntry(entry) {
   return entry?._type === 'playlist' || entry?.ie_key === 'YoutubePlaylist';
 }
 
+function isUnplayableEntry(entry) {
+  const title = entry?.title || entry?.fulltitle || '';
+  if (UNPLAYABLE_TITLE_PATTERN.test(title)) {
+    return title;
+  }
+  return null;
+}
+
 function getPlayableUrl(entry) {
   if (!entry) {
     return null;
@@ -77,6 +86,12 @@ function getPlayableUrl(entry) {
 
 function toTrack(entry) {
   if (isPlaylistEntry(entry) && !Array.isArray(entry.entries)) {
+    return null;
+  }
+  const unplayable = isUnplayableEntry(entry);
+  if (unplayable) {
+    const id = entry?.id || entry?.url || 'unknown';
+    logger.debug(`[yt-dlp] skipping ${id}: ${unplayable}`);
     return null;
   }
   const url = getPlayableUrl(entry);
