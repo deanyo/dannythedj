@@ -120,8 +120,28 @@ function runYtDlpJson(input, options = {}) {
     });
 
     child.on('close', (code) => {
+      const trimmedStderr = stderr.trim();
       if (code !== 0) {
-        reject(new Error(`yt-dlp exited with code ${code}: ${stderr}`.trim()));
+        if (ignoreErrors && stdout.trim()) {
+          try {
+            const parsed = JSON.parse(stdout);
+            logger.warn(
+              `[yt-dlp] exited with code ${code} but returned partial data. ${trimmedStderr}`
+            );
+            resolve(parsed);
+            return;
+          } catch (error) {
+            reject(
+              new Error(`Failed to parse yt-dlp output: ${error.message}`)
+            );
+            return;
+          }
+        }
+        reject(
+          new Error(
+            `yt-dlp exited with code ${code}: ${trimmedStderr || stderr}`.trim()
+          )
+        );
         return;
       }
       try {
