@@ -86,6 +86,7 @@ If the voice channel becomes empty, the bot will leave automatically.
 - `HEALTHCHECK_PATH`: file updated by the bot for container healthchecks
 - `HEALTHCHECK_MAX_AGE_SECONDS`: max age before healthcheck fails (default 120)
 - `PLAYLIST_LIMIT`: max tracks to queue from a playlist (default 50, 0 = unlimited)
+- `RESOLVE_TIMEOUT_MS`: max time to resolve a URL/search (default 20000)
 - `DEBUG_LOG_CHANNEL_ID`: channel ID for error summaries (optional)
 - `DEBUG_LOG_THROTTLE_SECONDS`: minimum seconds between error summaries (default 60)
 - `YTDLP_COOKIES_PATH`: path to exported YouTube cookies for age/region/private videos

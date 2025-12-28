@@ -105,24 +105,49 @@ function toTrack(entry) {
   };
 }
 
+function getNumberEnv(name, fallback) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') {
+    return fallback;
+  }
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+const DEFAULT_RESOLVE_TIMEOUT_MS = getNumberEnv(
+  'RESOLVE_TIMEOUT_MS',
+  20_000
+);
+
 function runYtDlpJson(input, options = {}) {
   return new Promise((resolve, reject) => {
     const ignoreErrors = options.ignoreErrors === true;
     const flatPlaylist = options.flatPlaylist === true;
     const playlistStart = normalizePlaylistIndex(options.playlistStart);
     const playlistEnd = normalizePlaylistIndex(options.playlistEnd);
+    const timeoutMs = Number.isFinite(options.timeoutMs)
+      ? options.timeoutMs
+      : DEFAULT_RESOLVE_TIMEOUT_MS;
+    const socketTimeout = Math.max(1, Math.ceil(timeoutMs / 1000));
     const args = buildYtDlpArgs([
       '--dump-single-json',
       '--no-warnings',
       ...(flatPlaylist ? ['--flat-playlist'] : []),
       ...(playlistStart ? ['--playlist-start', String(playlistStart)] : []),
       ...(playlistEnd ? ['--playlist-end', String(playlistEnd)] : []),
+      ...(timeoutMs > 0 ? ['--socket-timeout', String(socketTimeout)] : []),
       ...(ignoreErrors ? ['--ignore-errors'] : []),
       input
     ]);
     const child = spawn('yt-dlp', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let settled = false;
     let stdout = '';
     let stderr = '';
+    let timeoutId = null;
+
+    logger.debug(
+      `[yt-dlp] resolving ${input} (timeout ${timeoutMs}ms)`
+    );
 
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (chunk) => {
@@ -132,8 +157,22 @@ function runYtDlpJson(input, options = {}) {
       stderr += chunk.toString();
     });
 
+    const fail = (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (child && !child.killed) {
+        child.kill('SIGKILL');
+      }
+      reject(error);
+    };
+
     child.on('error', (error) => {
-      reject(
+      fail(
         new Error(
           `Failed to start yt-dlp (${error.message}). Is yt-dlp installed and in PATH?`
         )
@@ -141,6 +180,9 @@ function runYtDlpJson(input, options = {}) {
     });
 
     child.on('close', (code) => {
+      if (settled) {
+        return;
+      }
       const trimmedStderr = stderr.trim();
       if (code !== 0) {
         if (ignoreErrors && stdout.trim()) {
@@ -149,16 +191,20 @@ function runYtDlpJson(input, options = {}) {
             logger.warn(
               `[yt-dlp] exited with code ${code} but returned partial data. ${trimmedStderr}`
             );
+            settled = true;
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+            }
             resolve(parsed);
             return;
           } catch (error) {
-            reject(
+            fail(
               new Error(`Failed to parse yt-dlp output: ${error.message}`)
             );
             return;
           }
         }
-        reject(
+        fail(
           new Error(
             `yt-dlp exited with code ${code}: ${trimmedStderr || stderr}`.trim()
           )
@@ -166,11 +212,21 @@ function runYtDlpJson(input, options = {}) {
         return;
       }
       try {
+        settled = true;
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
         resolve(JSON.parse(stdout));
       } catch (error) {
-        reject(new Error(`Failed to parse yt-dlp output: ${error.message}`));
+        fail(new Error(`Failed to parse yt-dlp output: ${error.message}`));
       }
     });
+
+    if (timeoutMs > 0) {
+      timeoutId = setTimeout(() => {
+        fail(new Error(`yt-dlp timed out after ${timeoutMs}ms.`));
+      }, timeoutMs);
+    }
   });
 }
 
@@ -186,6 +242,11 @@ async function resolveTracks(input) {
   const query = isLikelyUrl(input) ? input : `ytsearch1:${input}`;
   const isPlaylistQuery = isLikelyUrl(input) && hasPlaylistParam(input);
   const info = await runYtDlpJson(query, { ignoreErrors: isPlaylistQuery });
+  if (!isLikelyUrl(input) && isPlaylistEntry(info)) {
+    const firstEntry = Array.isArray(info?.entries) ? info.entries[0] : null;
+    const track = toTrack(firstEntry);
+    return track ? [track] : [];
+  }
   const tracks = extractTracks(info);
   if (tracks.length > 0) {
     return tracks;
@@ -195,15 +256,6 @@ async function resolveTracks(input) {
     return resolvePlaylistTracks(playlistUrl);
   }
   return [];
-}
-
-function getNumberEnv(name, fallback) {
-  const raw = process.env[name];
-  if (raw === undefined || raw === '') {
-    return fallback;
-  }
-  const value = Number(raw);
-  return Number.isFinite(value) ? value : fallback;
 }
 
 const DEFAULT_STREAM_TIMEOUT_MS = getNumberEnv(
